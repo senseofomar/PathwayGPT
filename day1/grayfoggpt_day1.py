@@ -1,132 +1,156 @@
-import os     # 'os' lets us work with files and folders (listing, joining paths, etc.)
-import re     # 're' is Python's Regular Expression library — for text pattern matching/splitting.
-import sys    # 'sys' gives us system-level tools (like exiting the program with sys.exit()).
+# =========================
+# IMPORTS
+# =========================
+
+import os  # 'os' lets us interact with the operating system: work with files, folders, and paths.
+import re  # 're' is Python's Regular Expression library — allows advanced text search and pattern matching.
+import sys  # 'sys' provides system-level operations, e.g., sys.exit() to stop the program.
 
 # =========================
-# Function: search_in_chapters
+# SETTINGS — Change here to switch modes
 # =========================
-def search_in_chapters(folder_path, keyword, case_insensitive=True):
+
+# CASE_SENSITIVE_MODE is a global setting that controls search behavior.
+# True  → matches must exactly match letter case (e.g., "Main" != "main").
+# False → ignores case differences (e.g., "Main" == "main" == "MAIN").
+CASE_SENSITIVE_MODE = False
+
+
+# =========================
+# FUNCTION: keyword_in_sentence
+# =========================
+def keyword_in_sentence(keyword, sentence):
+    """
+    Return True if the 'keyword' appears in 'sentence' as a WHOLE WORD.
+
+    Whole word means:
+        - 'main' will match 'main'
+        - 'main' will NOT match 'remained'
+
+    Respects the global CASE_SENSITIVE_MODE setting for case behavior.
+    """
+
+    # Step 1: Create a regex pattern with word boundaries (\b) to match the whole word.
+    # re.escape(keyword) ensures any special regex characters in the keyword are treated literally.
+    pattern = r'\b' + re.escape(keyword) + r'\b'
+
+    # Step 2: Decide case-sensitivity based on global setting.
+    # flags = 0 → exact case match; re.IGNORECASE → match regardless of case.
+    flags = 0 if CASE_SENSITIVE_MODE else re.IGNORECASE
+
+    # Step 3: Search the sentence for our pattern.
+    # re.search() returns a Match object if found, None otherwise.
+    # bool(...) converts the result into True/False.
+    return bool(re.search(pattern, sentence, flags))
+
+
+# =========================
+# FUNCTION: search_in_chapters
+# =========================
+def search_in_chapters(folder_path, keyword):
     """
     Search for a keyword inside all .txt files in folder_path and print matching sentences.
 
     Parameters:
-        folder_path (str)       - path to the folder containing text files
-        keyword (str)           - the word or phrase we want to find
-        case_insensitive (bool) - whether to ignore uppercase/lowercase differences
+        folder_path (str) - path to the folder containing text files.
+        keyword (str)     - the word or phrase we want to find.
     """
 
-    # Prepare a "search version" of the keyword
-    # If case_insensitive is True, we lowercase the keyword so comparisons are easier.
-    # This prevents missing matches just because of uppercase/lowercase differences.
-    if case_insensitive:
-        kw = keyword.lower()
-    else:
-        kw = keyword
+    # Tracks whether at least one match was found across all files.
+    found_any = False
 
-    found_any = False  # Tracks if we find *any* match at all (used for final "no matches" message).
-
-    # Loop through all files in the folder — sorted() ensures results are always in the same order.
+    # Step 1: Loop through files in the folder in sorted order for consistent output.
     for filename in sorted(os.listdir(folder_path)):
-        # Only process files ending in .txt (case-insensitive check)
+
+        # Step 2: Only process files ending with ".txt" (case-insensitive check).
         if filename.lower().endswith(".txt"):
-            file_path = os.path.join(folder_path, filename)  # Create the full file path.
+            file_path = os.path.join(folder_path, filename)  # Full path to file.
 
             try:
-                # Open the file safely with UTF-8 encoding (good for most text).
+                # Step 3: Open the file for reading in UTF-8 encoding.
                 with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()  # Read the whole file into one big string.
+                    content = f.read()
             except Exception as e:
-                # If opening/reading fails, print an error but don't crash the program.
+                # If file can’t be opened/read, display an error and skip it.
                 print(f"[ERROR] Could not read '{file_path}': {e}")
-                continue  # Move on to the next file.
+                continue
 
-            # Prepare the file's content for searching:
-            # If case-insensitive, lowercase the whole content so "Fog" == "fog".
-            search_content = content.lower() if case_insensitive else content
+            # Step 4: Quick first check — skip file if keyword not found anywhere in it.
+            # Saves time instead of splitting into sentences unnecessarily.
+            if keyword_in_sentence(keyword, content):
+                found_any = True
+                print(f"\n=== Matches in {filename} ===")
 
-            # Check if our keyword exists anywhere in the text.
-            if kw in search_content:
-                found_any = True  # Mark that we found something.
-                print(f"\n=== Matches in {filename} ===")  # Header for this file's matches.
-
-                # Split the text into sentences.
-                # This regex: r'(?<=[.!?])\s+' means:
-                #   - '(?<=[.!?])' → look for a position *after* ., !, or ?
-                #   - '\s+' → then match one or more spaces/newlines
-                # This gives us separate sentences based on punctuation.
+                # Step 5: Split file content into sentences.
+                # Regex: '(?<=[.!?])\s+' means "split at spaces that follow . or ! or ?".
                 sentences = re.split(r'(?<=[.!?])\s+', content)
 
-                # Loop over each sentence to check for the keyword.
+                # Step 6: Check each sentence for the keyword.
                 for sentence in sentences:
-                    # Prepare the sentence for matching (lowercase if case-insensitive)
-                    check_sentence = sentence.lower() if case_insensitive else sentence
-                    if kw in check_sentence:
-                        # If the keyword exists here, print the sentence without extra spaces.
+                    if keyword_in_sentence(keyword, sentence):
+                        # Print sentence with leading "➜" for visual clarity.
                         print("  ➜", sentence.strip())
 
-    # After checking all files: if we found nothing, say so.
+    # Step 7: If nothing was found in any file, display message.
     if not found_any:
         print(f"\nNo matches found for '{keyword}' in folder '{folder_path}'.")
 
 
 # =========================
-# Function: main
+# FUNCTION: main
 # =========================
 def main():
     """
-    Main entry point for the program.
-    - Figures out where the 'chapters' folder is.
-    - Runs a loop asking the user for keywords until they quit.
+    Main driver function — sets up the environment and runs the search loop.
     """
 
-    # Find the folder 'chapters' that should be NEXT TO this script file.
-    # __file__ is the path of the current Python file.
-    script_dir = os.path.dirname(os.path.abspath(__file__))  # Folder containing this script.
-    folder = os.path.join(script_dir, "chapters")  # Append 'chapters' to that folder path.
+    # Step 1: Find the directory where this script is located.
+    script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # If the 'chapters' folder doesn't exist, tell the user and quit cleanly.
+    # Step 2: Look for a "chapters" folder next to this script.
+    folder = os.path.join(script_dir, "chapters")
+
+    # Step 3: If folder doesn't exist, display error and exit.
     if not os.path.isdir(folder):
         print(f"[ERROR] Missing folder: {folder}")
         print("Create a folder named 'chapters' next to this script and put .txt files inside.")
-        sys.exit(1)  # Exit the program with status code 1 (means 'error').
+        sys.exit(1)  # Exit program.
 
-    # Print a small program header.
-    print("GrayFogGPT Day1 — simple keyword search (type 'q' or 'quit' to exit)\n")
+    # Step 4: Display program intro with mode information.
+    mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
+    print(f"GrayFogGPT Day1 — keyword search ({mode_label} mode)\n(type 'q' or 'quit' to exit)\n")
 
-    # =========================
-    # Interactive Search Loop
-    # =========================
+    # Step 5: Infinite loop for user input until they quit.
     while True:
         try:
-            # Ask the user for a keyword — .strip() removes leading/trailing spaces.
+            # Prompt for keyword.
             keyword = input("🔍 Enter a keyword (or 'q' to quit): ").strip()
         except EOFError:
-            # Handles the case when the input stream closes unexpectedly
-            # (e.g., pressing Ctrl+D in Linux/Mac).
+            # If input is unexpectedly closed (e.g., Ctrl+D), exit cleanly.
             print("\nInput closed — exiting.")
-            break  # Exit the loop.
+            break
 
-        # If the user typed q, quit, or exit (case-insensitive), stop the program.
+        # Step 6: Quit command check.
         if keyword.lower() in ("q", "quit", "exit"):
             print("Goodbye — see you later.")
             break
 
-        # If the user pressed Enter without typing anything, ask again.
+        # Step 7: Reject empty input.
         if keyword == "":
             print("Please type a non-empty keyword.")
             continue
 
-        # For now, we *always* do case-insensitive search (good for testing).
-        search_in_chapters(folder, keyword, case_insensitive=True)
+        # Step 8: Perform search in all chapter files.
+        search_in_chapters(folder, keyword)
 
-        # Print a separator so results are visually clearer between searches.
+        # Step 9: Print a separator after each search.
         print("\n--- Search finished ---\n")
 
 
 # =========================
-# Script entry point check
+# RUN PROGRAM
 # =========================
 if __name__ == "__main__":
-    # This makes sure main() only runs if we run THIS file directly
-    # and not if we import it into another Python file.
+    # This check ensures that main() runs only if this script is executed directly,
+    # not if it’s imported as a module from another script.
     main()
