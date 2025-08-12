@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/grayfoggpt.iml" filepath="$PROJECT_DIR$/.idea/grayfoggpt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/PathwayGPT.iml" filepath="$PROJECT_DIR$/.idea/PathwayGPT.iml" />
     </modules>
   </component>
 </project>
