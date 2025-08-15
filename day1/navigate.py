@@ -132,8 +132,8 @@ def highlight_sentence_with_colors(sentence, keywords, kw_color_map, case_sensit
     """
     # Escape every keyword so special characters are literal
     escaped = [re.escape(k) for k in keywords]
-    # Group them into a single 'alternation' pattern: (kw1|kw2|kw3)
-    group = r'(' + '|'.join(escaped) + r')'
+    # Group with word boundaries to avoid matching inside other words
+    group = r'\b(?:' + '|'.join(escaped) + r')\b'
     # Set regex flags: IGNORECASE if not case_sensitive, otherwise 0
     flags = 0 if case_sensitive else re.IGNORECASE
 
@@ -415,48 +415,3 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
         except ValueError:
             # Unrecognized command
             print("Unknown command. Use 'n', 'p', a number, 'o' to open file, or 'q' to quit.")
-
-# -----------------------
-# Main entry point
-# -----------------------
-
-def main():
-    """
-    Main program flow:
-      1. Ensure chapters folder exists.
-      2. Ask user for comma-separated keywords.
-      3. Collect all matches across chapters.
-      4. Build color map and enter interactive navigation.
-    """
-    # 1) Validate chapters folder presence (fail early so user corrects issue).
-    if not os.path.isdir(CHAPTERS_FOLDER):
-        print(f"[ERROR] chapters folder not found at: {CHAPTERS_FOLDER}")
-        print("Place your chapter .txt files in a folder named 'chapters' next to this script.")
-        sys.exit(1)
-
-    # 2) Prompt user for keywords (comma-separated)
-    raw = input("Enter keyword(s) separated by commas (e.g., 'fog, Klein, ritual'): ").strip()
-    if not raw:
-        print("No keywords provided. Exiting.")
-        return
-
-    # Build a clean list of keywords preserving input order
-    keywords = [k.strip() for k in raw.split(",") if k.strip()]
-
-    # 3) Use global case sensitivity flag for the search behavior
-    case_sensitive = False  # hard-coded here to keep search forgiving; change to CASE_SENSITIVE_MODE if you prefer
-
-    # 4) Build per-keyword color mapping for consistent coloring
-    kw_color_map = build_keyword_color_map(keywords)
-
-    # 5) Collect matches across all chapter files (may take a moment for many files)
-    print("Collecting matches across chapter files (this may take a moment)...")
-    matches = collect_all_matches(CHAPTERS_FOLDER, keywords, case_sensitive=case_sensitive)
-
-    # 6) Enter interactive navigation UI
-    interactive_navigation(matches, keywords, kw_color_map, case_sensitive=case_sensitive)
-
-
-# Standard Python "entry point" check so script runs only when executed directly
-if __name__ == "__main__":
-    main()

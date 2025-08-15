@@ -6,7 +6,7 @@ import os  # 'os' module: lets us work with the operating system (folders, files
 import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
 import re # 're' module: Python's Regular Expressions — powerful pattern matching for text.
 from config import CASE_SENSITIVE_MODE
-from search import search_in_chapters
+from navigate import build_keyword_color_map, collect_all_matches, CHAPTERS_FOLDER, interactive_navigation
 
 
 # =========================
@@ -34,7 +34,7 @@ def main():
 
     # Display program mode (case-sensitive or not) to the user.
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
-    print(f"GrayFogGPT Day1 — multi-keyword search ({mode_label} mode)\n(type 'q' or 'quit' to exit)\n")
+    print(f"PathwayGPT Day1 — multi-keyword search ({mode_label} mode)\n(type 'q' or 'quit' to exit)\n")
 
     # Main input loop — keeps running until user quits.
     while True:
@@ -59,8 +59,15 @@ def main():
         # Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
-        # Perform the search in the "chapters" folder.
-        search_in_chapters(folder, keywords)
+        # 4) Build per-keyword color mapping for consistent coloring
+        kw_color_map = build_keyword_color_map(keywords)
+
+        # 5) Collect matches across all chapter files (may take a moment for many files)
+        print("Collecting matches across chapter files (this may take a moment)...")
+        matches = collect_all_matches(CHAPTERS_FOLDER, keywords)
+
+        # 6) Enter interactive navigation UI
+        interactive_navigation(matches, keywords, kw_color_map)
 
         # Separator after search results.
         print("\n--- Search finished ---\n")
