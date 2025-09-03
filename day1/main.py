@@ -73,7 +73,8 @@ def main():
         # Separator after search results.
         print("\n--- Search finished ---\n")
 
-        export_to_csv(matches, "klein_searches.csv")
+        export_to_csv(matches, 'search_results.csv')
+
 
 # =========================
 # RUN PROGRAM
