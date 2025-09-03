@@ -6,6 +6,7 @@ import os  # 'os' module: lets us work with the operating system (folders, files
 import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
 import re # 're' module: Python's Regular Expressions — powerful pattern matching for text.
 from config import CASE_SENSITIVE_MODE
+from export_to_csv import export_to_csv
 from navigate import build_keyword_color_map, collect_all_matches, CHAPTERS_FOLDER, interactive_navigation
 
 
@@ -71,6 +72,8 @@ def main():
 
         # Separator after search results.
         print("\n--- Search finished ---\n")
+
+        export_to_csv(matches, "klein_searches.csv")
 
 # =========================
 # RUN PROGRAM
