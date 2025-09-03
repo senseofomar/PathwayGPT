@@ -6,13 +6,16 @@ def export_to_csv(results, filename ):
         writer = csv.writer(f)
         writer.writerow("")
         writer.writerows(results)
+    print("✅ your current searches are saved in ", filename)
 
-    print("Do you want a custom csv file for your search keywords?")
-
-    cmd = input("\nCommand (yes, no, y , n): ").strip().lower()
+    cmd = input("\nDo you want a custom csv file for your search keywords? ( type y or yes **anything apart from that means NO**): ").strip().lower()
     if cmd in ("yes", "y"):
         custom_filename = (input("Enter your csv file name (with.csv) : ")).strip()
-        export_to_csv(results, custom_filename)
+        with open(custom_filename, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow("")
+            writer.writerows(results)
+        print(f"✅ Your custom CSV file is saved as {custom_filename}")
 
 
 
