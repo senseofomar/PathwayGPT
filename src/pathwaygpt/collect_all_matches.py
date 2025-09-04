@@ -20,7 +20,7 @@ Match = namedtuple("Match", [
 
 
 def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False, threshold=80):
-    print(f"[DEBUG] collect_all_matches called with fuzzy={fuzzy}")
+    #print(f"[DEBUG] collect_all_matches called with fuzzy={fuzzy}")
 
     """
     Walk through all '.txt' files in folder_path, split each file into sentences,
@@ -65,7 +65,7 @@ def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False
             sentence_lower = sentence.lower()  # helpful for fuzzy matching
 
             for kw, pat in patterns.items():
-                print(f"[DEBUG] Regex for '{kw}': {pat.pattern}")
+                #print(f"[DEBUG] Regex for '{kw}': {pat.pattern}")
 
                 # --- Exact regex matches ---
                 for m in pat.finditer(sentence):
