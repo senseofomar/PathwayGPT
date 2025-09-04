@@ -69,7 +69,7 @@ def main():
 
         #fuzzy searching
 
-        use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() == "y"
+        use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
 
         matches = collect_all_matches(
             CHAPTERS_FOLDER,
