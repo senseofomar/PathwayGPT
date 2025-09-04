@@ -65,7 +65,18 @@ def main():
 
         # 5) Collect matches across all chapter files (may take a moment for many files)
         print("Collecting matches across chapter files (this may take a moment)...")
-        matches = collect_all_matches(CHAPTERS_FOLDER, keywords)
+        #matches = collect_all_matches(CHAPTERS_FOLDER, keywords)  used previously
+
+        #fuzzy searching
+
+        use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() == "y"
+
+        matches = collect_all_matches(
+            CHAPTERS_FOLDER,
+            keywords,
+            case_sensitive=CASE_SENSITIVE_MODE,
+            fuzzy=use_fuzzy
+        )
 
         # 6) Enter interactive navigation UI
         interactive_navigation(matches, keywords, kw_color_map)
@@ -73,7 +84,7 @@ def main():
         # Separator after search results.
         print("\n--- Search finished ---\n")
 
-        export_to_csv(matches, 'last_search_results.csv')
+        export_to_csv(matches, 'recent_search_results.csv')
 
 
 # =========================

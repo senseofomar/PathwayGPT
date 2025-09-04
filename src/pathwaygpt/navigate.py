@@ -16,6 +16,8 @@ import subprocess                 # for launching external programs (like editor
 from collections import namedtuple  # for simple structured storage (Match records)
 from shutil import which          # to check if an executable exists on PATH
 
+from fuzzywuzzy import fuzz   #fuzzywuzzy and Levenshtein
+
 # Attempt to import colorama so colored output works on Windows.
 # If colorama isn't installed, the script will still run but without colors.
 try:
@@ -66,17 +68,19 @@ else:
         RESET_ALL = ""
     Style = _DummyStyle()
 
+
+# Using namedtuple to keep matched item data organized and readable.
 # -----------------------
 # Data container: Match
 # -----------------------
-# Using namedtuple to keep matched item data organized and readable.
 Match = namedtuple("Match", [
     "file",     # filename where match occurred (e.g., 'chapter0001.txt')
     "sentence", # full sentence text containing the match (original unmodified)
     "start",    # start character index of the match within the sentence (int)
     "end",      # end character index of the match within the sentence (int)
     "keyword",  # the keyword string that matched (from user input)
-    "snippet"   # short snippet string built around the match for preview
+    "snippet",  # short snippet string built around the match for preview
+    "is_fuzzy"  # NEW: True if this match came from fuzzy search
 ])
 
 # -----------------------
@@ -120,8 +124,30 @@ def make_snippet(sentence, start, end, context_chars=CONTEXT_CHARS):
     snippet = prefix + sentence[s:e].strip() + suffix
     return snippet
 
+def highlight_sentence_with_colors(sentence, matches, keywords, kw_color_map, case_sensitive=False):
+    """
+    Highlight keywords in 'sentence' using per-keyword colors.
+    - Exact matches get their assigned color.
+    - Fuzzy matches highlight the whole sentence in GREEN.
+    """
+    flags = 0 if case_sensitive else re.IGNORECASE
+    result = sentence
 
-def highlight_sentence_with_colors(sentence, keywords, kw_color_map, case_sensitive=False):
+    # If any fuzzy match exists, just make the whole sentence green
+    if any(m.is_fuzzy for m in matches):
+        return f"{COLOR_MAP['GREEN']}{sentence}{Style.RESET_ALL}"
+
+    # Otherwise, highlight exact matches
+    for m in matches:
+        color = kw_color_map.get(m.keyword, "")
+        reset = Style.RESET_ALL if Style else ""
+        pattern = r'\b' + re.escape(m.keyword) + r'\b'
+        result = re.sub(pattern, lambda mt: f"{color}{mt.group(0)}{reset}", result, flags=flags)
+
+    return result
+
+
+    #def highlight_sentence_with_colors(sentence, keywords, kw_color_map, case_sensitive=False):
     """
     Highlight all occurrences of any keyword in 'sentence' using per-keyword colors.
     - Build a grouped regex (kw1|kw2|...) where each keyword is escaped.
@@ -157,11 +183,13 @@ def highlight_sentence_with_colors(sentence, keywords, kw_color_map, case_sensit
         return f"{color}{matched_text}{reset}"
 
     # Perform substitution for all matches in sentence
-    highlighted = re.sub(group, repl, sentence, flags=flags)
-    return highlighted
+        highlighted = re.sub(group, repl, sentence, flags=flags)
+        return highlighted
 
 
-def collect_all_matches(folder_path, keywords, case_sensitive=False):
+def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False, threshold=80):
+    print(f"[DEBUG] collect_all_matches called with fuzzy={fuzzy}")
+
     """
     Walk through all '.txt' files in folder_path, split each file into sentences,
     find all whole-word matches for ANY keyword, and collect Match records.
@@ -174,7 +202,7 @@ def collect_all_matches(folder_path, keywords, case_sensitive=False):
     if not os.path.isdir(folder_path):
         raise FileNotFoundError(f"Folder not found: {folder_path}")
 
-    matches = []      # list to collect Match records
+    matches = []  # list to collect Match records
 
     # Pre-compile regex patterns per keyword (faster when scanning many sentences)
     patterns = {}
@@ -202,11 +230,40 @@ def collect_all_matches(folder_path, keywords, case_sensitive=False):
 
         # For each sentence we check each compiled pattern using finditer to capture positions
         for sentence in sentences:
+            sentence_lower = sentence.lower()  # helpful for fuzzy matching
+
             for kw, pat in patterns.items():
+                print(f"[DEBUG] Regex for '{kw}': {pat.pattern}")
+
+                # --- Exact regex matches ---
                 for m in pat.finditer(sentence):
                     start, end = m.start(), m.end()
                     snippet = make_snippet(sentence, start, end)
-                    matches.append(Match(file=fname, sentence=sentence, start=start, end=end, keyword=kw, snippet=snippet))
+                    matches.append(Match(
+                        file=fname,
+                        sentence=sentence,
+                        start=start,
+                        end=end,
+                        keyword=kw,
+                        snippet=snippet,
+                        is_fuzzy=False  # <-- exact
+                    ))
+
+                # --- Fuzzy matches ---
+                if fuzzy:
+                    score = fuzz.partial_ratio(kw.lower(), sentence_lower)
+                    if score >= threshold and not pat.search(sentence):
+                        print(f"[DEBUG] FUZZY HIT: kw={kw}, score={score}, sentence='{sentence[:80]}'")
+                        snippet = make_snippet(sentence, 0, len(sentence))
+                        matches.append(Match(
+                            file=fname,
+                            sentence=sentence,
+                            start=0,
+                            end=len(sentence),
+                            keyword=f"{kw} (fuzzy {score}%)",
+                            snippet=snippet,
+                            is_fuzzy=True  # <-- fuzzy
+                        ))
 
     # Return all matched records (could be empty list if no matches)
     return matches
@@ -349,8 +406,9 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
     print(f"\nFound {len(matches)} matches. Showing previews (context snippets):\n")
     for i, m in enumerate(matches, start=1):
         # Use color highlighting in the preview snippet
-        preview = highlight_sentence_with_colors(m.snippet, keywords, kw_color_map, case_sensitive=case_sensitive)
+        preview = highlight_sentence_with_colors(m.snippet, [m], keywords, kw_color_map, case_sensitive=case_sensitive)
         print(f"{i:04d}. {m.file} - {preview}")
+
 
     # Navigation index (0-based)
     idx = 0
@@ -360,7 +418,9 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
     while True:
         current = matches[idx]
         # Show full sentence with colors applied
-        full_colored = highlight_sentence_with_colors(current.sentence, keywords, kw_color_map, case_sensitive=case_sensitive)
+        # When showing full sentence
+        full_colored = highlight_sentence_with_colors(current.sentence, [current], keywords, kw_color_map,
+                                                      case_sensitive=case_sensitive)
         print("\n" + "="*80)
         print(f"Match {idx+1}/{len(matches)}  —  File: {current.file}  —  Keyword: {current.keyword}")
         print("- Full sentence (highlighted):")
