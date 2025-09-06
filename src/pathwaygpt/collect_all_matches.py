@@ -19,7 +19,7 @@ Match = namedtuple("Match", [
 ])
 
 
-def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False, threshold=80):
+def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False, threshold=80, chapter_filter = None):
     #print(f"[DEBUG] collect_all_matches called with fuzzy={fuzzy}")
 
     """
@@ -47,6 +47,12 @@ def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False
         # Only consider files ending with .txt (case-insensitive)
         if not fname.endswith(".txt"):
             continue
+
+    #  Skip if chapter filter is set and this file doesn't match
+        if chapter_filter:
+            if chapter_filter not in fname.lower() and chapter_filter.zfill(8) not in fname.lower():
+                continue
+
         file_path = os.path.join(folder_path, fname)
         # Read file content using UTF-8 encoding, skipping files that fail to open
         try:

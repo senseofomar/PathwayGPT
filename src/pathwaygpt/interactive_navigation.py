@@ -24,6 +24,7 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
       - number     : jump to that match number (1-based)
       - o          : open current match file in PyCharm (or fallback)
       - q          : quit navigation
+      - f          : filter results by word (case-insensitive)
     The function prints the highlighted sentence and a snippet for each match.
     """
     # If no matches, inform and return early
@@ -60,7 +61,7 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
         print("="*80)
 
         # Read command from user
-        cmd = input("\nCommand (n/p/number/o/q): ").strip()
+        cmd = input("\nNavigation [n=next, p=prev, o=open, f=filter, q=quit]: ").strip()
 
         # Quit commands
         if cmd.lower() in ("q", "quit", "exit"):
@@ -68,13 +69,23 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
             break
 
         # Next or empty (Enter) -> next match (circular)
-        if cmd == "" or cmd.lower() == "n":
+        if cmd.lower in (" ", "n"):
             idx = (idx + 1) % len(matches)
             continue
 
         # Previous -> previous match (circular)
         if cmd.lower() == "p":
             idx = (idx - 1) % len(matches)
+            continue
+
+        if cmd == "f":
+            sub = input("Filter word: ").strip().lower()
+            filtered = [m for m in matches if sub in m.sentence.lower()]
+            if filtered:
+                matches = filtered
+                idx = 0
+            else:
+                print("⚠️ No results after filter.")
             continue
 
         # Open in editor: compute line and open

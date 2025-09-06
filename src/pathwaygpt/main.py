@@ -48,60 +48,67 @@ def main():
             print("\nInput closed — exiting.")
             break
 
-        # Exit commands — check lowercase version for flexibility.
         if raw_input_val.lower() in ("q", "quit", "exit"):
             print("Goodbye — see you later.")
             break
 
-        # Empty input handling.
-        if raw_input_val == "":
-            print("Please type at least one keyword.")
-            continue
-
-        #Search history
         if raw_input_val.lower() == "search-history":
             if not search_history:
                 print("No searches yet.")
             else:
                 print("Last searches:")
-                for i, h in enumerate(search_history, 1):
-                    print(f"{i}. {', '.join(h)}")
-            continue  # go back to input loop
+                for i, (keys, chap, fuzzy) in enumerate(search_history, 1):
+                    chap_label = chap if chap else "all"
+                    fuzzy_label = "fuzzy" if fuzzy else "exact"
+                    print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
+            continue
 
-        # Split input by commas → strip spaces → remove empty results.
+        if raw_input_val == "":
+            print("Please type at least one keyword.")
+            continue
+
+         # Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
-        # 4) Build per-keyword color mapping for consistent coloring
-        kw_color_map = build_keyword_color_map(keywords)
+        # Step 1: Ask global vs chapter-specific
+        chapter_filter = None
+        mode = input("Search in (a)ll chapters or (s)pecific? [a/s]: ").strip().lower()
+        if mode == "s":
+            chapter_filter = input("Enter part of the chapter filename (e.g. 'chapter0005'): ").strip()
 
-        # fuzzy searching
-
+        # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
 
+        # Save to history
+        search_history.append((keywords, chapter_filter, use_fuzzy))
+        if len(search_history) > 3:
+            search_history.pop(0)
+
+        # Step 3: Collect matches
         matches = collect_all_matches(
             CHAPTERS_FOLDER,
             keywords,
             case_sensitive=CASE_SENSITIVE_MODE,
-            fuzzy=use_fuzzy
+            fuzzy=use_fuzzy,
+            chapter_filter=chapter_filter
         )
 
-        # 5) Collect matches across all chapter files (may take a moment for many files)
-        print("Collecting matches across chapter files (this may take a moment)...")
-        #matches = collect_all_matches(CHAPTERS_FOLDER, keywords)  used previously
+        if not matches:
+            print("⚠️ No matches found.")
+            continue
+
+        #Build per-keyword color mapping for consistent coloring
+        kw_color_map = build_keyword_color_map(keywords)
 
 
-        # 6) Enter interactive navigation UI
+        #Enter interactive navigation UI
         interactive_navigation(matches, keywords, kw_color_map)
 
-        search_history.append(keywords)
-        if len(search_history) > 3:
-            search_history.pop(0)  # remove oldest
-
-        # Separator after search results.
-        print("\n--- Search finished ---\n")
 
         export_to_csv(matches, 'recent_search_results.csv')
 
+        # Separator after search results.
+        print("\n--- Search finished ---\n")
 
 # =========================
 # RUN PROGRAM
