@@ -20,8 +20,10 @@ def main():
     - Searches through chapter files until the user quits.
     """
 
-
-    search_history = []                  #for user search history
+    # load previous session
+    session_data = session_utils.load_session(SESSION_PATH)
+    print("previous session:", session_data)
+    search_history = session_data.get("search_history",[])                  #for user search history
 
 
     # Get the directory where this script is located.
@@ -36,10 +38,7 @@ def main():
         print("Create a folder named 'chapters' next to this script and put .txt files inside.")
         sys.exit(1)  # Exit the script with status code 1 (indicates error).
 
-    #load previous session
-    session_data = session_utils.load_session(SESSION_PATH)
-    print("previous session:", session_data)
-
+    print(f"Loaded {len(search_history)} previous searches.")
     # Display program mode (case-sensitive or not) to the user.
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
     print(f"PathwayGPT — multi-keyword search ({mode_label} mode)\n(type 'q' or 'quit' to exit)\n")
@@ -87,7 +86,7 @@ def main():
 
         # Save to history
         search_history.append((keywords, chapter_filter, use_fuzzy))
-        if len(search_history) > 3:
+        if len(search_history) > 10:
             search_history.pop(0)
 
         # Step 3: Collect matches
@@ -113,9 +112,12 @@ def main():
 
         export_to_csv(matches, 'recent_search_results.csv')
 
-        session_utils.save_session(session_data, SESSION_PATH)
         # Separator after search results.
         print("\n--- Search finished ---\n")
+
+        # Save session on exit
+        session_data["search_history"] = search_history
+        session_utils.save_session(session_data, SESSION_PATH)
 
 # =========================
 # RUN PROGRAM
