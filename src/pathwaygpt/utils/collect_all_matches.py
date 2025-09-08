@@ -4,8 +4,8 @@ from collections import namedtuple  # for simple structured storage (Match recor
 
 from fuzzywuzzy import fuzz
 
-from make_snippet import make_snippet
-from whole_word_pattern import whole_word_pattern
+from .make_snippet import make_snippet
+from .whole_word_pattern import whole_word_pattern
 
 
 Match = namedtuple("Match", [

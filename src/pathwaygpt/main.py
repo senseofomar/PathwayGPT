@@ -6,7 +6,9 @@ from utils.config import CASE_SENSITIVE_MODE
 from utils.export_to_csv import export_to_csv
 from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
+from utils import session_utils
 
+SESSION_PATH = "session.json"
 # =========================
 # FUNCTION: main
 # =========================
@@ -33,6 +35,10 @@ def main():
         print(f"[ERROR] Missing folder: {folder}")
         print("Create a folder named 'chapters' next to this script and put .txt files inside.")
         sys.exit(1)  # Exit the script with status code 1 (indicates error).
+
+    #load previous session
+    session_data = session_utils.load_session(SESSION_PATH)
+    print("previous session:", session_data)
 
     # Display program mode (case-sensitive or not) to the user.
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
@@ -107,6 +113,7 @@ def main():
 
         export_to_csv(matches, 'recent_search_results.csv')
 
+        session_utils.save_session(session_data, SESSION_PATH)
         # Separator after search results.
         print("\n--- Search finished ---\n")
 
