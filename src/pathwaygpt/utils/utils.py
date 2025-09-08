@@ -3,7 +3,7 @@
 # =========================
 import re
 
-from config import CASE_SENSITIVE_MODE
+from utils.config import CASE_SENSITIVE_MODE
 
 
 def keyword_in_sentence(keywords, sentence):

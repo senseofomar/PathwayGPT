@@ -5,13 +5,8 @@
 #  - interactive navigation: n (next), p (prev), number (jump), o (open in editor), q (quit)
 
 import os  # for file and path handling, launching OS commands
-import re  # for regex searching and substitution
-import sys  # for sys.exit and platform detection
-import subprocess  # for launching external programs (like editor)
-from collections import namedtuple  # for simple structured storage (Match records)
-from shutil import which  # to check if an executable exists on PATH
 
-from highlight import highlight_sentence_with_colors, CHAPTERS_FOLDER
+from utils.highlight import highlight_sentence_with_colors, CHAPTERS_FOLDER
 from open_in_pycharm import open_in_pycharm, compute_match_file_line
 
 

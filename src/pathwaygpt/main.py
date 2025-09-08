@@ -1,11 +1,11 @@
 import os  # 'os' module: lets us work with the operating system (folders, files, paths, etc.).
 import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
 
-from collect_all_matches import collect_all_matches
-from config import CASE_SENSITIVE_MODE
-from export_to_csv import export_to_csv
-from highlight import build_keyword_color_map, CHAPTERS_FOLDER
-from interactive_navigation import interactive_navigation
+from utils.collect_all_matches import collect_all_matches
+from utils.config import CASE_SENSITIVE_MODE
+from utils.export_to_csv import export_to_csv
+from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
+from utils.interactive_navigation import interactive_navigation
 
 # =========================
 # FUNCTION: main
