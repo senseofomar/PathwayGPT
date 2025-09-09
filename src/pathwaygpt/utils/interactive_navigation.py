@@ -64,7 +64,7 @@ def interactive_navigation(matches, keywords, kw_color_map, case_sensitive=False
             break
 
         # Next or empty (Enter) -> next match (circular)
-        if cmd.lower in (" ", "n"):
+        if cmd.lower() in (" ", "n"):
             idx = (idx + 1) % len(matches)
             continue
 

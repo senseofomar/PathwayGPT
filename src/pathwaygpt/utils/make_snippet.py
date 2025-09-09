@@ -1,4 +1,4 @@
-from utils.highlight import CONTEXT_CHARS
+from pathwaygpt.utils.highlight import CONTEXT_CHARS
 
 
 def make_snippet(sentence, start, end, context_chars=CONTEXT_CHARS):

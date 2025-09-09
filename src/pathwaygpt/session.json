@@ -20,6 +20,29 @@
       ],
       null,
       true
+    ],
+    [
+      [
+        "klein"
+      ],
+      "chapter0004",
+      true
+    ],
+    [
+      [
+        "klein"
+      ],
+      "chapter0003",
+      true
+    ],
+    [
+      [
+        "klein",
+        "melissa",
+        "benson"
+      ],
+      null,
+      false
     ]
   ]
 }
