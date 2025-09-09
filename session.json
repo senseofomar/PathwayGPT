@@ -2,23 +2,23 @@
   "search_history": [
     [
       [
-        "Klein"
+        "klein"
       ],
       null,
       false
     ],
     [
       [
-        "qui"
+        "lein"
       ],
       null,
-      false
+      true
     ],
     [
       [
-        "lkine"
+        "kline"
       ],
-      null,
+      "chapter0001",
       true
     ]
   ]

@@ -1,4 +1,4 @@
-from utils import session_utils
+from pathwaygpt.utils import session_utils
 
 def main():
     path ="session.json"

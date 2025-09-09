@@ -6,7 +6,7 @@
 
 import os  # for file and path handling, launching OS commands
 
-from utils.highlight import highlight_sentence_with_colors, CHAPTERS_FOLDER
+from .highlight import highlight_sentence_with_colors, CHAPTERS_FOLDER
 from .open_in_pycharm import open_in_pycharm, compute_match_file_line
 
 
