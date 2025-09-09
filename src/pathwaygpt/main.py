@@ -60,13 +60,30 @@ def main():
         if raw_input_val.lower() == "search-history":
             if not search_history:
                 print("No searches yet.")
+
             else:
                 print("Last searches:")
                 for i, (keys, chap, fuzzy) in enumerate(search_history, 1):
                     chap_label = chap if chap else "all"
                     fuzzy_label = "fuzzy" if fuzzy else "exact"
                     print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
+                continue
+
+        # 9 sept save history now feature
+        if raw_input_val.lower()=='save-history-now':
+            session_data["search_history"]= search_history
+            session_utils.save_session(session_data, SESSION_PATH)
+            print("✅ Session saved.")
             continue
+
+        if raw_input_val.lower() =="clear-history":
+            confirm = input("⚠️ Are you sure? (y/n): ")
+            if confirm.lower()=="y":
+                search_history.clear()
+                session_data["search_history"]= search_history
+                session_utils.save_session(session_data,SESSION_PATH)
+                print("🗑️ Search history cleared.")
+                continue
 
         if raw_input_val == "":
             print("Please type at least one keyword.")
@@ -76,11 +93,12 @@ def main():
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
         # Step 1: Ask global vs chapter-specific
-        chapter_filter = None
+
         mode = input("Search in (a)ll chapters or (s)pecific? [a/s]: ").strip().lower()
         if mode == "s":
             chapter_filter = input("Enter part of the chapter filename (e.g. 'chapter0005'): ").strip()
-
+        else:
+            chapter_filter = None
         # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
 
