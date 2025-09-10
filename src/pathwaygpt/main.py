@@ -2,13 +2,13 @@ import os  # 'os' module: lets us work with the operating system (folders, files
 import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
 
 from utils.collect_all_matches import collect_all_matches
-from utils.config import CASE_SENSITIVE_MODE
+from utils.config import CASE_SENSITIVE_MODE, SESSION_PATH
 from utils.export_to_csv import export_to_csv
 from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
 from utils import session_utils
 
-SESSION_PATH = "session.json"
+
 # =========================
 # FUNCTION: main
 # =========================
@@ -20,10 +20,11 @@ def main():
     - Searches through chapter files until the user quits.
     """
 
-    # load previous session
+    search_this_session = 0
+
     session_data = session_utils.load_session(SESSION_PATH)
-    print("previous session:", session_data)
     search_history = session_data.get("search_history",[])                  #for user search history
+    total_search_count = session_data.get("total_search_count", 0)
 
 
     # Get the directory where this script is located.
@@ -38,16 +39,18 @@ def main():
         print("Create a folder named 'chapters' next to this script and put .txt files inside.")
         sys.exit(1)  # Exit the script with status code 1 (indicates error).
 
-    print(f"Loaded {len(search_history)} previous searches.")
     # Display program mode (case-sensitive or not) to the user.
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
     print(f"PathwayGPT — multi-keyword search ({mode_label} mode)\n(type 'q' or 'quit' to exit)\n")
+
+    print("Previous session:", session_data)
+    print(f"Loaded {len(search_history)} Previous searches.")
 
     # Main input loop — keeps running until user quits.
     while True:
         try:
             # Ask user for comma-separated keywords.
-            raw_input_val = input("🔍 Enter keyword(s) separated by commas (or 'q' to quit): ").strip()
+            raw_input_val = input("\n🔍 Enter keyword(s) separated by commas (or 'q' to quit): ").strip()
         except EOFError:
             # EOFError occurs when input is closed (e.g., Ctrl+D in Unix).
             print("\nInput closed — exiting.")
@@ -69,7 +72,6 @@ def main():
                     print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
                 continue
 
-        # 9 sept save history now feature
         if raw_input_val.lower()=='save-history-now':
             session_data["search_history"]= search_history
             session_utils.save_session(session_data, SESSION_PATH)
@@ -81,9 +83,18 @@ def main():
             if confirm.lower()=="y":
                 search_history.clear()
                 session_data["search_history"]= search_history
+
+                search_this_session = 0
+
                 session_utils.save_session(session_data,SESSION_PATH)
-                print("🗑️ Search history cleared.")
+                print("🗑️ Search history and search count cleared.")
                 continue
+
+        if raw_input_val.lower() == "stats":
+            total = session_data.get("total_search_count", 0)
+            print(f"📊 Total searches ever: {total}")
+            print(f"📊 Searches this run: {search_this_session}")
+            continue
 
         if raw_input_val == "":
             print("Please type at least one keyword.")
@@ -101,6 +112,9 @@ def main():
             chapter_filter = None
         # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
+
+        search_this_session += 1
+        total_search_count= session_data.get("total_search_count", 0) + 1
 
         # Save to history
         search_history.append((keywords, chapter_filter, use_fuzzy))
@@ -135,6 +149,7 @@ def main():
 
         # Save session on exit
         session_data["search_history"] = search_history
+        session_data["total_search_count"] = total_search_count
         session_utils.save_session(session_data, SESSION_PATH)
 
 # =========================
