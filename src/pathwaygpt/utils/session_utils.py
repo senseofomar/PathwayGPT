@@ -11,8 +11,15 @@ def load_session(path:str)->dict:
 
     if not Path(path).exists():
         return{}
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if not content:  # file exists but is empty
+                return {}
+            return json.loads(content)
+    except (json.JSONDecodeError, OSError):
+        print(f"[WARN] Session file corrupted → starting fresh.")
+        return {}
 
 def reset_session(path:str)->None:
     Path(path).unlink(missing_ok=True)
