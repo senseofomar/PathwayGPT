@@ -1,23 +1,40 @@
 {
-  "search_count": [
-    "search_count",
-    0
-  ],
   "search_history": [
     [
       [
-        "fog"
+        "klein"
       ],
       null,
       true
     ],
     [
       [
-        "gun"
+        "benson"
+      ],
+      null,
+      true
+    ],
+    [
+      [
+        "elisa"
+      ],
+      null,
+      true
+    ],
+    [
+      [
+        "klein"
+      ],
+      null,
+      true
+    ],
+    [
+      [
+        "benson"
       ],
       null,
       true
     ]
   ],
-  "total_search_count": 6
+  "total_search_count": 5
 }

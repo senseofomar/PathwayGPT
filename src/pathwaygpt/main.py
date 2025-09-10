@@ -2,7 +2,7 @@ import os  # 'os' module: lets us work with the operating system (folders, files
 import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
 
 from utils.collect_all_matches import collect_all_matches
-from utils.config import CASE_SENSITIVE_MODE, SESSION_PATH
+from utils.config import CASE_SENSITIVE_MODE, SESSION_PATH, MAX_HISTORY
 from utils.export_to_csv import export_to_csv
 from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
@@ -21,10 +21,12 @@ def main():
     """
 
     session_data = session_utils.load_session(SESSION_PATH)
-    search_history = session_data.get("search_history",[])        #persistent history           #for user search history
-    session_data["total_search_count"] = session_data.get("total_search_count", 0)   #lifetime counter
+    # Ensure session keys exist
+    session_data.setdefault("search_history", [])
+    session_data.setdefault("total_search_count", 0)
 
-    search_this_session = 0   #resets every run
+    # Resets every run
+    search_this_session = 0
 
     # Get the directory where this script is located.
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -56,50 +58,50 @@ def main():
             break
 
         if raw_input_val.lower() in ("q", "quit", "exit"):
+            session_utils.save_session(session_data, SESSION_PATH)
             print("Goodbye — see you later.")
             break
 
+        # Show history
         if raw_input_val.lower() == "search-history":
-            if not search_history:
+            if not session_data["search_history"]:
                 print("No searches yet.")
-
             else:
                 print("Last searches:")
-                for i, (keys, chap, fuzzy) in enumerate(search_history, 1):
+                for i, (keys, chap, fuzzy) in enumerate(session_data["search_history"], 1):
                     chap_label = chap if chap else "all"
                     fuzzy_label = "fuzzy" if fuzzy else "exact"
                     print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
-                continue
+            continue
 
-        if raw_input_val.lower()=='save-history-now':
-            session_data["search_history"]= search_history
+        # Save now
+        if raw_input_val.lower() == "save-history-now":
             session_utils.save_session(session_data, SESSION_PATH)
             print("✅ Session saved.")
             continue
 
-        if raw_input_val.lower() =="clear-history":
+        # Clear history
+        if raw_input_val.lower() == "clear-history":
             confirm = input("⚠️ Are you sure? (y/n): ")
-            if confirm.lower()=="y":
-                search_history.clear()
-                session_data["search_history"]= search_history
-
-                search_this_session = 0   #resets current session counter and not the total searches counter
-
-                session_utils.save_session(session_data,SESSION_PATH)
-                print("🗑️ Search history and search count cleared.")
-                continue
-
-        if raw_input_val.lower() == "stats":
-            total = session_data.get("total_search_count", 0)
-            print(f"📊 Total searches ever: {total}")
-            print(f"🔎Searches this run: {search_this_session}")
+            if confirm.lower() == "y":
+                session_data["search_history"].clear()
+                search_this_session = 0
+                print("🧹 Search history cleared (lifetime total still preserved).\n")
             continue
 
+        #Stats
+        if raw_input_val.lower() == "stats":
+            print(f"📊 Total searches ever: {session_data['total_search_count']}")
+            print(f"📊 Searches this session: {search_this_session}")
+            print(f"📊 Saved history size: {len(session_data['search_history'])}\n")
+            continue
+
+        #Empty Input
         if raw_input_val == "":
             print("Please type at least one keyword.")
             continue
 
-         # Split input by commas → strip spaces → remove empty results.
+         # Process keywords   Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
         # Step 1: Ask global vs chapter-specific
@@ -113,14 +115,14 @@ def main():
         # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
 
+        # Update counters
         search_this_session += 1
-        total_search_count= session_data.get("total_search_count", 0) + 1
-        session_data["total_search_count"] = total_search_count  # persist lifetime counter
+        session_data["total_search_count"] += 1   # persist lifetime counter
 
         # Save to history
-        search_history.append((keywords, chapter_filter, use_fuzzy))
-        if len(search_history) > 10:
-            search_history.pop(0)
+        session_data["search_history"].append((keywords, chapter_filter, use_fuzzy))
+        if len(session_data["search_history"]) > MAX_HISTORY:
+            session_data["search_history"].pop(0)
 
         # Step 3: Collect matches
         matches = collect_all_matches(
@@ -139,17 +141,16 @@ def main():
         kw_color_map = build_keyword_color_map(keywords)
 
 
-        #Enter interactive navigation UI
+        #Interactive navigation UI
         interactive_navigation(matches, keywords, kw_color_map)
 
-
+        # Export results to CSV
         export_to_csv(matches, 'recent_search_results.csv')
 
         # Separator after search results.
         print("\n--- Search finished ---\n")
 
         # Save session on exit
-        session_data["search_history"] = search_history
         session_utils.save_session(session_data, SESSION_PATH)
 
 # =========================
