@@ -20,12 +20,11 @@ def main():
     - Searches through chapter files until the user quits.
     """
 
-    search_this_session = 0
-
     session_data = session_utils.load_session(SESSION_PATH)
-    search_history = session_data.get("search_history",[])                  #for user search history
-    total_search_count = session_data.get("total_search_count", 0)
+    search_history = session_data.get("search_history",[])        #persistent history           #for user search history
+    session_data["total_search_count"] = session_data.get("total_search_count", 0)   #lifetime counter
 
+    search_this_session = 0   #resets every run
 
     # Get the directory where this script is located.
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,10 +40,10 @@ def main():
 
     # Display program mode (case-sensitive or not) to the user.
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
-    print(f"PathwayGPT — multi-keyword search ({mode_label} mode)\n(type 'q' or 'quit' to exit)\n")
+    print(f"\n        PathwayGPT — multi-keyword search ({mode_label} mode)\n         (type 'q' or 'quit' to exit)\n")
 
-    print("Previous session:", session_data)
-    print(f"Loaded {len(search_history)} Previous searches.")
+    if session_data["search_history"]:
+        print(f"Previous session loaded. {len(session_data['search_history'])} past searches available.\n")
 
     # Main input loop — keeps running until user quits.
     while True:
@@ -84,7 +83,7 @@ def main():
                 search_history.clear()
                 session_data["search_history"]= search_history
 
-                search_this_session = 0
+                search_this_session = 0   #resets current session counter and not the total searches counter
 
                 session_utils.save_session(session_data,SESSION_PATH)
                 print("🗑️ Search history and search count cleared.")
@@ -93,7 +92,7 @@ def main():
         if raw_input_val.lower() == "stats":
             total = session_data.get("total_search_count", 0)
             print(f"📊 Total searches ever: {total}")
-            print(f"📊 Searches this run: {search_this_session}")
+            print(f"🔎Searches this run: {search_this_session}")
             continue
 
         if raw_input_val == "":
@@ -110,11 +109,13 @@ def main():
             chapter_filter = input("Enter part of the chapter filename (e.g. 'chapter0005'): ").strip()
         else:
             chapter_filter = None
+
         # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
 
         search_this_session += 1
         total_search_count= session_data.get("total_search_count", 0) + 1
+        session_data["total_search_count"] = total_search_count  # persist lifetime counter
 
         # Save to history
         search_history.append((keywords, chapter_filter, use_fuzzy))
@@ -149,7 +150,6 @@ def main():
 
         # Save session on exit
         session_data["search_history"] = search_history
-        session_data["total_search_count"] = total_search_count
         session_utils.save_session(session_data, SESSION_PATH)
 
 # =========================
