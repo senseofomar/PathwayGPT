@@ -24,6 +24,7 @@ def main():
     # Ensure session keys exist
     session_data.setdefault("search_history", [])
     session_data.setdefault("total_search_count", 0)
+    session_data.setdefault("favorites", [])
 
     # Resets every run
     search_this_session = 0
@@ -101,7 +102,33 @@ def main():
             print("Please type at least one keyword.")
             continue
 
-         # Process keywords   Split input by commas → strip spaces → remove empty results.
+        # Favorites: add last search
+        if raw_input_val.lower() == "fav-add":
+            if not session_data["search_history"]:
+                print("⚠️ No search yet to add to favorites.")
+            else:
+                last_search = session_data["search_history"][-1]
+                if last_search not in session_data["favorites"]:
+                    session_data["favorites"].append(last_search)
+                    print(f"✅ Added to favorites: {last_search}")
+                else:
+                    print("ℹ️ Already in favorites.")
+            continue
+
+        # Favorites: list all
+        if raw_input_val.lower() == "fav-list":
+            if not session_data["favorites"]:
+                print("⭐ No favorites yet.")
+            else:
+                print("\n⭐ Favorites:")
+                for i, fav in enumerate(session_data["favorites"], 1):
+                    keys, chap, fuzzy = fav
+                    chap_label = chap if chap else "all"
+                    fuzzy_label = "fuzzy" if fuzzy else "exact"
+                    print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
+            continue
+
+        # Process keywords   Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
         # Step 1: Ask global vs chapter-specific
