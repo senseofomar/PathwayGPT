@@ -34,7 +34,32 @@
       ],
       null,
       true
+    ],
+    [
+      [
+        "klein",
+        "melissa"
+      ],
+      null,
+      true
+    ],
+    [
+      [
+        "search-count"
+      ],
+      null,
+      true
     ]
   ],
-  "total_search_count": 5
+  "total_search_count": 7,
+  "favorites": [
+    [
+      [
+        "klein",
+        "melissa"
+      ],
+      null,
+      true
+    ]
+  ]
 }
