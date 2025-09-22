@@ -2,7 +2,7 @@ import os  # for file and path handling, launching OS commands
 import re  # for regex searching and substitution
 from collections import namedtuple  # for simple structured storage (Match records)
 
-from fuzzywuzzy import fuzz
+from rapidfuzz import fuzz
 
 from .make_snippet import make_snippet
 from .whole_word_pattern import whole_word_pattern
