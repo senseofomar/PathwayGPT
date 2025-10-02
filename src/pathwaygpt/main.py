@@ -25,6 +25,7 @@ def main():
     session_data.setdefault("search_history", [])
     session_data.setdefault("total_search_count", 0)
     session_data.setdefault("favorites", [])
+    chapter_range = session_data.get('chapter_range', None)
 
     # Resets every run
     search_this_session = 0
@@ -128,6 +129,33 @@ def main():
                     print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
             continue
 
+        #set range
+        if raw_input_val.lower() == "set-range":
+            try:
+                raw = input("Enter start and end chapter (e.g., 1 50): ").strip()
+                start, end = map(int, raw.split())
+                chapter_range = [start, end]
+                session_data["chapter_range"] = chapter_range
+                session_utils.save_session(session_data, SESSION_PATH)
+                print(f"✅ Range set: {start} → {end}")
+            except Exception:
+                print("⚠️ Invalid input. Example: 1 50")
+            continue
+
+        if raw_input_val.lower() == "show-range":
+            if chapter_range:
+                print(f"Current range: {chapter_range[0]} → {chapter_range[1]}")
+            else:
+                print("No range set.")
+            continue
+
+        if raw_input_val.lower() == "clear-range":
+            chapter_range = None
+            session_data["chapter_range"] = None
+            session_utils.save_session(session_data, SESSION_PATH)
+            print("🗑️ Range cleared. Searching all chapters.")
+            continue
+
         # Process keywords   Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
@@ -150,6 +178,11 @@ def main():
         session_data["search_history"].append((keywords, chapter_filter, use_fuzzy))
         if len(session_data["search_history"]) > MAX_HISTORY:
             session_data["search_history"].pop(0)
+
+        chapter_filter = None  # you already have this
+        valid_range = None
+        if chapter_range:
+            valid_range = range(chapter_range[0], chapter_range[1] + 1)
 
         # Step 3: Collect matches
         matches = collect_all_matches(

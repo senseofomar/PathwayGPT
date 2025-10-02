@@ -19,7 +19,7 @@ Match = namedtuple("Match", [
 ])
 
 
-def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False, threshold=80, chapter_filter = None):
+def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False, threshold=80, chapter_filter = None, valid_range = None):
     #print(f"[DEBUG] collect_all_matches called with fuzzy={fuzzy}")
 
     """
@@ -47,7 +47,15 @@ def collect_all_matches(folder_path, keywords, case_sensitive=False, fuzzy=False
         # Only consider files ending with .txt (case-insensitive)
         if not fname.endswith(".txt"):
             continue
-
+        # ✅ Filter by chapter_range if set
+        if valid_range:
+            # Extract number from e.g. "chapter0005.txt"
+            try:
+                num = int(''.join(ch for ch in fname if ch.isdigit()))
+                if num not in valid_range:
+                    continue  # skip this file
+            except ValueError:
+                continue  # if filename has no digits, skip
     #  Skip if chapter filter is set and this file doesn't match
         if chapter_filter:
             if chapter_filter not in fname.lower() and chapter_filter.zfill(8) not in fname.lower():
