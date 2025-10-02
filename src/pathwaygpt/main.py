@@ -179,6 +179,7 @@ def main():
         if len(session_data["search_history"]) > MAX_HISTORY:
             session_data["search_history"].pop(0)
 
+        # chapter filter
         chapter_filter = None  # you already have this
         valid_range = None
         if chapter_range:
@@ -190,7 +191,8 @@ def main():
             keywords,
             case_sensitive=CASE_SENSITIVE_MODE,
             fuzzy=use_fuzzy,
-            chapter_filter=chapter_filter
+            chapter_filter=chapter_filter,
+            valid_range=valid_range
         )
 
         if not matches:
