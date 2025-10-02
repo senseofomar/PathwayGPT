@@ -6,8 +6,19 @@
       ],
       null,
       true
+    ],
+    [
+      [
+        "klein"
+      ],
+      null,
+      false
     ]
   ],
-  "total_search_count": 1,
-  "favorites": []
+  "total_search_count": 2,
+  "favorites": [],
+  "chapter_range": [
+    2,
+    4
+  ]
 }
