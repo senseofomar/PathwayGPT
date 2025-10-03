@@ -7,6 +7,7 @@ from utils.export_to_csv import export_to_csv
 from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
 from utils import session_utils
+from utils.semantic_utils import load_semantic_index, semantic_search
 
 
 # =========================
@@ -48,6 +49,9 @@ def main():
 
     if session_data["search_history"]:
         print(f"Previous session loaded. {len(session_data['search_history'])} past searches available.\n")
+
+    # Load semantic search index once
+    semantic_index, semantic_mapping = load_semantic_index()
 
     # Main input loop — keeps running until user quits.
     while True:
@@ -154,6 +158,16 @@ def main():
             session_data["chapter_range"] = None
             session_utils.save_session(session_data, SESSION_PATH)
             print("🗑️ Range cleared. Searching all chapters.")
+            continue
+
+        # Semantic Search
+        if raw_input_val.lower().startswith("semantic:"):
+            query = raw_input_val.split("semantic:", 1)[1].strip()
+            results = semantic_search(query, semantic_index, semantic_mapping)
+
+            print("\n🔎 Semantic search results:\n")
+            for fname, chunk, dist in results:
+                print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
             continue
 
         # Process keywords   Split input by commas → strip spaces → remove empty results.
