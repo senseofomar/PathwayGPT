@@ -1,6 +1,7 @@
 import os  # 'os' module: lets us work with the operating system (folders, files, paths, etc.).
 import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
 
+from pathwaygpt.utils.context_memory import recall_last_search, suggest_related
 from utils.collect_all_matches import collect_all_matches
 from utils.config import CASE_SENSITIVE_MODE, SESSION_PATH, MAX_HISTORY
 from utils.export_to_csv import export_to_csv
@@ -170,6 +171,16 @@ def main():
                 print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
             continue
 
+        # Recall
+        if raw_input_val.lower() == "recall-last":
+            last = recall_last_search(session_data)
+            if not last:
+                print("⚠️ No previous search found.")
+            else:
+                keys, chap, fuzzy = last
+                print(f"Last search: {keys} [{chap or 'all'}, {'fuzzy' if fuzzy else 'exact'}]")
+            continue
+
         # Process keywords   Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
@@ -180,6 +191,11 @@ def main():
             chapter_filter = input("Enter part of the chapter filename (e.g. 'chapter0005'): ").strip()
         else:
             chapter_filter = None
+
+        #   Recall related
+        related = suggest_related(session_data, keywords)
+        if related:
+            print(f"💡 Related past keywords: {', '.join(related)}")
 
         # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
