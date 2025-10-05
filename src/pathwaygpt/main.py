@@ -181,6 +181,23 @@ def main():
                 print(f"Last search: {keys} [{chap or 'all'}, {'fuzzy' if fuzzy else 'exact'}]")
             continue
 
+        # After semantic search results
+        if raw_input_val.lower().startswith("semantic:"):
+            query = raw_input_val.split("semantic:", 1)[1].strip()
+            results = semantic_search(query, semantic_index, semantic_mapping)
+
+            print("\n🔎 Semantic search results:\n")
+            for fname, chunk, dist in results:
+                print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
+
+            top_chunks = [chunk for _, chunk, _ in results[:3]]  # take top 3 for answer generation
+
+            from utils.answer_generator import generate_answer
+            print("\n🤖 PathwayGPT’s interpretation:\n")
+            answer = generate_answer(query, top_chunks)
+            print(answer)
+            continue
+
         # Process keywords   Split input by commas → strip spaces → remove empty results.
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
 
