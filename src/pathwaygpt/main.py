@@ -10,7 +10,6 @@ from utils.interactive_navigation import interactive_navigation
 from utils import session_utils
 from utils.semantic_utils import load_semantic_index, semantic_search
 from pathwaygpt.memory import ChatMemory
-from pathwaygpt.semantic_utils import semantic_search as semantic_search_main
 
 
 # =========================
@@ -56,6 +55,9 @@ def main():
     # Load semantic search index once
     semantic_index, semantic_mapping = load_semantic_index()
 
+    # === INITIALIZE CHAT MEMORY ===
+    memory = ChatMemory(max_messages=10)
+
     # Main input loop — keeps running until user quits.
     while True:
         try:
@@ -70,6 +72,11 @@ def main():
             session_utils.save_session(session_data, SESSION_PATH)
             print("Goodbye — see you later.")
             break
+
+        # === CHAT MEMORY INTEGRATION ===
+        memory.add("user", raw_input_val)
+        context = memory.get_context()
+        print(f"🧠 Context so far: {context}\n")
 
         # Show history
         if raw_input_val.lower() == "search-history":
