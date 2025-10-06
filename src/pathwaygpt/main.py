@@ -9,6 +9,8 @@ from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
 from utils import session_utils
 from utils.semantic_utils import load_semantic_index, semantic_search
+from pathwaygpt.memory import ChatMemory
+from pathwaygpt.semantic_utils import semantic_search as semantic_search_main
 
 
 # =========================
