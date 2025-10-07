@@ -192,7 +192,6 @@ def main():
 
             top_chunks = [chunk for _, chunk, _ in results[:3]]  # take top 3 for answer generation
 
-            from utils.answer_generator import generate_answer
             print("\n🤖 PathwayGPT’s interpretation:\n")
             answer = generate_answer(query, top_chunks)
             print(answer)
