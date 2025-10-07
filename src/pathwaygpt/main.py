@@ -1,5 +1,5 @@
-import os  # 'os' module: lets us work with the operating system (folders, files, paths, etc.).
-import sys  # 'sys' module: lets us access system-specific functionality (like exiting the script early).
+import os
+import sys
 
 from pathwaygpt.utils.context_memory import recall_last_search, suggest_related
 from utils.collect_all_matches import collect_all_matches
@@ -9,63 +9,46 @@ from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
 from utils import session_utils
 from utils.semantic_utils import load_semantic_index, semantic_search
-from utils.answer_generator import generate_answer
+from utils.answer_generator import generate_answer  # ✅ moved import to top
 from pathwaygpt.memory import ChatMemory
 
 
-# =========================
-# FUNCTION: main
-# =========================
 def main():
-    """
-    Main program controller.
-    - Finds the 'chapters' folder.
-    - Keeps asking the user for keywords.
-    - Searches through chapter files until the user quits.
-    """
-
+    """Main controller for PathwayGPT."""
+    # === Load session ===
     session_data = session_utils.load_session(SESSION_PATH)
-    # Ensure session keys exist
     session_data.setdefault("search_history", [])
     session_data.setdefault("total_search_count", 0)
     session_data.setdefault("favorites", [])
-    chapter_range = session_data.get('chapter_range', None)
-
-    # Resets every run
+    chapter_range = session_data.get("chapter_range", None)
     search_this_session = 0
 
-    # Get the directory where this script is located.
+    # === Validate chapters folder ===
     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Build the path to the "chapters" folder in the same directory as the script.
     folder = os.path.join(script_dir, "chapters")
-
-    # If the folder doesn't exist, inform the user and stop the program.
     if not os.path.isdir(folder):
         print(f"[ERROR] Missing folder: {folder}")
         print("Create a folder named 'chapters' next to this script and put .txt files inside.")
-        sys.exit(1)  # Exit the script with status code 1 (indicates error).
+        sys.exit(1)
 
-    # Display program mode (case-sensitive or not) to the user.
+    # === Display mode ===
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
     print(f"\n        PathwayGPT — multi-keyword search ({mode_label} mode)\n         (type 'q' or 'quit' to exit)\n")
 
     if session_data["search_history"]:
         print(f"Previous session loaded. {len(session_data['search_history'])} past searches available.\n")
 
-    # Load semantic search index once
+    # === Load Semantic Search Index ===
     semantic_index, semantic_mapping = load_semantic_index()
 
-    # === INITIALIZE CHAT MEMORY ===
+    # === Initialize Memory ===
     memory = ChatMemory(max_messages=10)
 
-    # Main input loop — keeps running until user quits.
+    # === Main Loop ===
     while True:
         try:
-            # Ask user for comma-separated keywords.
             raw_input_val = input("\n🔍 Enter keyword(s) separated by commas (or 'q' to quit): ").strip()
         except EOFError:
-            # EOFError occurs when input is closed (e.g., Ctrl+D in Unix).
             print("\nInput closed — exiting.")
             break
 
@@ -74,13 +57,14 @@ def main():
             print("Goodbye — see you later.")
             break
 
-        # === CHAT MEMORY INTEGRATION ===
+        # === Update Memory ===
         memory.add("user", raw_input_val)
-        context = memory.get_context()
-        print(f"🧠 Context so far: {context}\n")
+        print(f"🧠 Context so far: {memory.get_context()}\n")
 
-        # Show history
-        if raw_input_val.lower() == "search-history":
+        # === Command Handling ===
+        command = raw_input_val.lower()
+
+        if command == "search-history":
             if not session_data["search_history"]:
                 print("No searches yet.")
             else:
@@ -91,35 +75,30 @@ def main():
                     print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
             continue
 
-        # Save now
-        if raw_input_val.lower() == "save-history-now":
+        if command == "save-history-now":
             session_utils.save_session(session_data, SESSION_PATH)
             print("✅ Session saved.")
             continue
 
-        # Clear history
-        if raw_input_val.lower() == "clear-history":
+        if command == "clear-history":
             confirm = input("⚠️ Are you sure? (y/n): ")
             if confirm.lower() == "y":
                 session_data["search_history"].clear()
                 search_this_session = 0
-                print("🧹 Search history cleared (lifetime total still preserved).\n")
+                print("🧹 Search history cleared.\n")
             continue
 
-        #Stats
-        if raw_input_val.lower() == "stats":
+        if command == "stats":
             print(f"📊 Total searches ever: {session_data['total_search_count']}")
             print(f"📊 Searches this session: {search_this_session}")
             print(f"📊 Saved history size: {len(session_data['search_history'])}\n")
             continue
 
-        #Empty Input
-        if raw_input_val == "":
+        if command == "":
             print("Please type at least one keyword.")
             continue
 
-        # Favorites: add last search
-        if raw_input_val.lower() == "fav-add":
+        if command == "fav-add":
             if not session_data["search_history"]:
                 print("⚠️ No search yet to add to favorites.")
             else:
@@ -131,8 +110,7 @@ def main():
                     print("ℹ️ Already in favorites.")
             continue
 
-        # Favorites: list all
-        if raw_input_val.lower() == "fav-list":
+        if command == "fav-list":
             if not session_data["favorites"]:
                 print("⭐ No favorites yet.")
             else:
@@ -144,8 +122,7 @@ def main():
                     print(f"{i}. {', '.join(keys)} [{chap_label}, {fuzzy_label}]")
             continue
 
-        #set range
-        if raw_input_val.lower() == "set-range":
+        if command == "set-range":
             try:
                 raw = input("Enter start and end chapter (e.g., 1 50): ").strip()
                 start, end = map(int, raw.split())
@@ -157,22 +134,18 @@ def main():
                 print("⚠️ Invalid input. Example: 1 50")
             continue
 
-        if raw_input_val.lower() == "show-range":
-            if chapter_range:
-                print(f"Current range: {chapter_range[0]} → {chapter_range[1]}")
-            else:
-                print("No range set.")
+        if command == "show-range":
+            print(f"Current range: {chapter_range[0]} → {chapter_range[1]}" if chapter_range else "No range set.")
             continue
 
-        if raw_input_val.lower() == "clear-range":
+        if command == "clear-range":
             chapter_range = None
             session_data["chapter_range"] = None
             session_utils.save_session(session_data, SESSION_PATH)
             print("🗑️ Range cleared. Searching all chapters.")
             continue
 
-        # Recall
-        if raw_input_val.lower() == "recall-last":
+        if command == "recall-last":
             last = recall_last_search(session_data)
             if not last:
                 print("⚠️ No previous search found.")
@@ -181,8 +154,8 @@ def main():
                 print(f"Last search: {keys} [{chap or 'all'}, {'fuzzy' if fuzzy else 'exact'}]")
             continue
 
-        # After semantic search results
-        if raw_input_val.lower().startswith("semantic:"):
+        # === SEMANTIC SEARCH + LLM ANSWER ===
+        if command.startswith("semantic:"):
             query = raw_input_val.split("semantic:", 1)[1].strip()
             results = semantic_search(query, semantic_index, semantic_mapping)
 
@@ -190,48 +163,33 @@ def main():
             for fname, chunk, dist in results:
                 print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
 
-            top_chunks = [chunk for _, chunk, _ in results[:3]]  # take top 3 for answer generation
+            # Top 3 context chunks for generation
+            top_chunks = [chunk for _, chunk, _ in results[:3]]
 
             print("\n🤖 PathwayGPT’s interpretation:\n")
             answer = generate_answer(query, top_chunks)
             print(answer)
             continue
 
-        # Process keywords   Split input by commas → strip spaces → remove empty results.
+        # === KEYWORD SEARCH MODE ===
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
-
-        # Step 1: Ask global vs chapter-specific
-
         mode = input("Search in (a)ll chapters or (s)pecific? [a/s]: ").strip().lower()
-        if mode == "s":
-            chapter_filter = input("Enter part of the chapter filename (e.g. 'chapter0005'): ").strip()
-        else:
-            chapter_filter = None
+        chapter_filter = input("Enter part of the chapter filename (e.g. 'chapter0005'): ").strip() if mode == "s" else None
 
-        #   Recall related
         related = suggest_related(session_data, keywords)
         if related:
             print(f"💡 Related past keywords: {', '.join(related)}")
 
-        # Step 2: Fuzzy choice
         use_fuzzy = input("Enable fuzzy search? (y/n): ").strip().lower() in ("y", "yes")
 
-        # Update counters
         search_this_session += 1
-        session_data["total_search_count"] += 1   # persist lifetime counter
-
-        # Save to history
+        session_data["total_search_count"] += 1
         session_data["search_history"].append((keywords, chapter_filter, use_fuzzy))
         if len(session_data["search_history"]) > MAX_HISTORY:
             session_data["search_history"].pop(0)
 
-        # chapter filter
-        chapter_filter = None  # you already have this
-        valid_range = None
-        if chapter_range:
-            valid_range = range(chapter_range[0], chapter_range[1] + 1)
+        valid_range = range(chapter_range[0], chapter_range[1] + 1) if chapter_range else None
 
-        # Step 3: Collect matches
         matches = collect_all_matches(
             CHAPTERS_FOLDER,
             keywords,
@@ -245,25 +203,13 @@ def main():
             print("⚠️ No matches found.")
             continue
 
-        #Build per-keyword color mapping for consistent coloring
         kw_color_map = build_keyword_color_map(keywords)
-
-
-        #Interactive navigation UI
         interactive_navigation(matches, keywords, kw_color_map)
+        export_to_csv(matches, "recent_search_results.csv")
 
-        # Export results to CSV
-        export_to_csv(matches, 'recent_search_results.csv')
-
-        # Separator after search results.
         print("\n--- Search finished ---\n")
-
-        # Save session on exit
         session_utils.save_session(session_data, SESSION_PATH)
 
-# =========================
-# RUN PROGRAM
-# =========================
+
 if __name__ == "__main__":
-    # This block runs only if script is executed directly (not imported as a module).
     main()
