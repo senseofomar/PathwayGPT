@@ -9,6 +9,7 @@ from utils.highlight import build_keyword_color_map, CHAPTERS_FOLDER
 from utils.interactive_navigation import interactive_navigation
 from utils import session_utils
 from utils.semantic_utils import load_semantic_index, semantic_search
+from utils.answer_generator import generate_answer
 from pathwaygpt.memory import ChatMemory
 
 
@@ -168,16 +169,6 @@ def main():
             session_data["chapter_range"] = None
             session_utils.save_session(session_data, SESSION_PATH)
             print("🗑️ Range cleared. Searching all chapters.")
-            continue
-
-        # Semantic Search
-        if raw_input_val.lower().startswith("semantic:"):
-            query = raw_input_val.split("semantic:", 1)[1].strip()
-            results = semantic_search(query, semantic_index, semantic_mapping)
-
-            print("\n🔎 Semantic search results:\n")
-            for fname, chunk, dist in results:
-                print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
             continue
 
         # Recall
