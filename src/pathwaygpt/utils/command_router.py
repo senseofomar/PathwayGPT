@@ -1,18 +1,22 @@
 # utils/command_router.py
 
-from pathwaygpt.utils.context_memory import recall_last_search, suggest_related
+from pathwaygpt.utils.context_memory import recall_last_search
 from pathwaygpt.utils.semantic_utils import semantic_search
 from pathwaygpt.utils.answer_generator import generate_answer
+from pathwaygpt.utils.memory_tools import recall_recent_queries, summarize_memory
+
 
 def handle_command(raw_input_val, session_data, chapter_range, semantic_index, semantic_mapping, memory):
     """Handle user commands from main() and return (handled, updated_chapter_range)."""
 
+    cmd = raw_input_val.lower()
+
     # Exit or quit
-    if raw_input_val.lower() in ("q", "quit", "exit"):
+    if cmd in ("q", "quit", "exit"):
         return "exit", chapter_range
 
     # Search history
-    if raw_input_val.lower() == "search-history":
+    if cmd == "search-history":
         if not session_data["search_history"]:
             print("No searches yet.")
         else:
@@ -24,14 +28,14 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
         return True, chapter_range
 
     # Save history
-    if raw_input_val.lower() == "save-history-now":
+    if cmd == "save-history-now":
         from utils import session_utils
         session_utils.save_session(session_data)
         print("✅ Session saved.")
         return True, chapter_range
 
     # Clear history
-    if raw_input_val.lower() == "clear-history":
+    if cmd == "clear-history":
         confirm = input("⚠️ Are you sure? (y/n): ")
         if confirm.lower() == "y":
             session_data["search_history"].clear()
@@ -39,13 +43,13 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
         return True, chapter_range
 
     # Stats
-    if raw_input_val.lower() == "stats":
+    if cmd == "stats":
         print(f"📊 Total searches ever: {session_data['total_search_count']}")
         print(f"📊 Saved history size: {len(session_data['search_history'])}")
         return True, chapter_range
 
     # Favorites
-    if raw_input_val.lower() == "fav-add":
+    if cmd == "fav-add":
         if not session_data["search_history"]:
             print("⚠️ No search yet to add to favorites.")
         else:
@@ -57,7 +61,7 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
                 print("ℹ️ Already in favorites.")
         return True, chapter_range
 
-    if raw_input_val.lower() == "fav-list":
+    if cmd == "fav-list":
         if not session_data["favorites"]:
             print("⭐ No favorites yet.")
         else:
@@ -70,7 +74,7 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
         return True, chapter_range
 
     # Range
-    if raw_input_val.lower() == "set-range":
+    if cmd == "set-range":
         try:
             raw = input("Enter start and end chapter (e.g., 1 50): ").strip()
             start, end = map(int, raw.split())
@@ -83,14 +87,14 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
             print("⚠️ Invalid input. Example: 1 50")
         return True, chapter_range
 
-    if raw_input_val.lower() == "show-range":
+    if cmd == "show-range":
         if chapter_range:
             print(f"Current range: {chapter_range[0]} → {chapter_range[1]}")
         else:
             print("No range set.")
         return True, chapter_range
 
-    if raw_input_val.lower() == "clear-range":
+    if cmd == "clear-range":
         chapter_range = None
         session_data["chapter_range"] = None
         from utils import session_utils
@@ -99,7 +103,7 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
         return True, chapter_range
 
     # Semantic search
-    if raw_input_val.lower().startswith("semantic:"):
+    if cmd.startswith("semantic:"):
         query = raw_input_val.split("semantic:", 1)[1].strip()
         results = semantic_search(query, semantic_index, semantic_mapping)
 
@@ -114,7 +118,7 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
         return True, chapter_range
 
     # Recall last
-    if raw_input_val.lower() == "recall-last":
+    if cmd == "recall-last":
         last = recall_last_search(session_data)
         if not last:
             print("⚠️ No previous search found.")
@@ -123,20 +127,21 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
             print(f"Last search: {keys} [{chap or 'all'}, {'fuzzy' if fuzzy else 'exact'}]")
         return True, chapter_range
 
-    elif cmd == "recall-memory":
-    recent = recall_recent_queries(memory.get_all())
-    if not recent:
-        print("🧠 No recent queries found.")
-    else:
-        print("\n🧠 Recent Queries:")
-        for i, q in enumerate(recent, 1):
-            print(f"{i}. {q}")
-    return True, chapter_range
+    # 🧠 Memory commands
+    if cmd == "recall-memory":
+        recent = recall_recent_queries(memory.get_all())
+        if not recent:
+            print("🧠 No recent queries found.")
+        else:
+            print("\n🧠 Recent Queries:")
+            for i, q in enumerate(recent, 1):
+                print(f"{i}. {q}")
+        return True, chapter_range
 
-    elif cmd == "summarize-memory":
-    summary = summarize_memory(memory.get_all())
-    print("\n🧩 Memory Summary:\n")
-    print(summary)
-    return True, chapter_range
+    if cmd == "summarize-memory":
+        summary = summarize_memory(memory.get_all())
+        print("\n🧩 Memory Summary:\n")
+        print(summary)
+        return True, chapter_range
 
     return False, chapter_range
