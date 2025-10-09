@@ -1,10 +1,10 @@
 # utils/command_router.py
 
 from pathwaygpt.utils.context_memory import recall_last_search, suggest_related
-from utils.semantic_utils import semantic_search
-from utils.answer_generator import generate_answer
+from pathwaygpt.utils.semantic_utils import semantic_search
+from pathwaygpt.utils.answer_generator import generate_answer
 
-def handle_command(raw_input_val, session_data, chapter_range, semantic_index, semantic_mapping):
+def handle_command(raw_input_val, session_data, chapter_range, semantic_index, semantic_mapping, memory):
     """Handle user commands from main() and return (handled, updated_chapter_range)."""
 
     # Exit or quit
@@ -122,5 +122,21 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
             keys, chap, fuzzy = last
             print(f"Last search: {keys} [{chap or 'all'}, {'fuzzy' if fuzzy else 'exact'}]")
         return True, chapter_range
+
+    elif cmd == "recall-memory":
+    recent = recall_recent_queries(memory.get_all())
+    if not recent:
+        print("🧠 No recent queries found.")
+    else:
+        print("\n🧠 Recent Queries:")
+        for i, q in enumerate(recent, 1):
+            print(f"{i}. {q}")
+    return True, chapter_range
+
+    elif cmd == "summarize-memory":
+    summary = summarize_memory(memory.get_all())
+    print("\n🧩 Memory Summary:\n")
+    print(summary)
+    return True, chapter_range
 
     return False, chapter_range

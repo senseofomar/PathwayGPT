@@ -71,7 +71,8 @@ def main():
             session_data,
             chapter_range,
             semantic_index,
-            semantic_mapping
+            semantic_mapping,
+            memory
         )
 
         # if command_router handled the input fully
