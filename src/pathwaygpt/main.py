@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()  # 🔑 Loads your .env variables (like OPENAI_API_KEY)
+
 import os
 import sys
 

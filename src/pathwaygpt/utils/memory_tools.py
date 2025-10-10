@@ -1,6 +1,12 @@
+import os
 from openai import OpenAI
 
-client = OpenAI()
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise ValueError("❌ Missing OpenAI API key. Make sure it's set in your .env file.")
+
+client = OpenAI(api_key=api_key)
 
 def summarize_memory(memory_messages: list, model="gpt-4o-mini"):
     """
