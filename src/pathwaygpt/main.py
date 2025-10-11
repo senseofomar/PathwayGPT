@@ -1,7 +1,10 @@
 from dotenv import load_dotenv
-load_dotenv()  # 🔑 Loads your .env variables (like OPENAI_API_KEY)
-
 import os
+
+load_dotenv()  # 🔑 Loads your .env variables (like OPENAI_API_KEY)
+print("DEBUG KEY:", os.getenv("OPENAI_API_KEY"))
+
+
 import sys
 
 from pathwaygpt.utils.command_router import handle_command
