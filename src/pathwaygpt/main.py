@@ -87,13 +87,7 @@ def main():
             print("👋 Goodbye — see you next time!")
             break
 
-        # --- Forget Memory Command ---
-        if raw_input_val.lower() in ("forget", "clear memory"):
-            memory.clear()
-            print("🧹 Memory cleared — starting fresh conversation context.")
-            continue
-
-        # --- Handle Custom Commands (like 'setrange', 'recall', etc.) ---
+        # --- Handle Custom Commands (like 'set range', 'recall', etc.) ---
         handled, chapter_range = handle_command(
             raw_input_val,
             session_data,
