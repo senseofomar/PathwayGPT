@@ -1,32 +1,26 @@
-from openai import OpenAI
+from pathwaygpt.utils.memory_tools import client
 
-def generate_answer(query, context_chunks, model="gpt-4o-mini"):
-    """
-    Takes user query + top chunks from semantic search,
-    and asks an LLM to summarize or explain the context.
-    """
-    context_text = "\n\n".join(context_chunks)
 
-    prompt = f"""
-You are PathwayGPT, a lore assistant for the web novel 'Lord of the Mysteries'.
-Answer based on the following story excerpts (avoid spoilers beyond what is given).
+def generate_answer(prompt, top_chunks, memory=None):
+    context_text = "\n\n".join([chunk['content'] for chunk in top_chunks])
+    system_prompt = (
+        "You are PathwayGPT, a helpful and spoiler-aware lore assistant for 'Lord of the Mysteries'. "
+        "Use only the provided text context to answer. "
+        "If uncertain, say so. Never invent spoilers beyond the user's progress."
+    )
 
-User Query: {query}
+    messages = [{"role": "system", "content": system_prompt}]
 
-Relevant Excerpts:
-{context_text}
+    # Include recent conversation history if available
+    if memory:
+        messages.extend(memory[-4:])  # last 4 exchanges
 
-Your Answer:
-"""
-
-    client = OpenAI()
+    messages.append({"role": "user", "content": f"{prompt}\n\nContext:\n{context_text}"})
 
     response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "You are a helpful and spoiler-aware lore assistant."},
-            {"role": "user", "content": prompt}
-        ]
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.7
     )
 
     return response.choices[0].message.content.strip()
