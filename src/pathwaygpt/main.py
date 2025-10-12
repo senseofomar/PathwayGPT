@@ -105,11 +105,14 @@ def main():
             top_chunks = [chunk for _, chunk, _ in results[:3]]
 
             print("\n🤖 PathwayGPT’s interpretation:\n")
-            answer = generate_answer(query, top_chunks, memory = memory)
-            memory.append({"role": "user", "content": query})
-            memory.append({"role": "assistant", "content": answer})
-            print(answer)
-            continue
+            try:
+                answer = generate_answer(query, top_chunks, memory = memory)
+                memory.add("user", query)
+                memory.add("assistant", answer)
+                print(answer)
+            except Exception as e:
+                print(f"⚠️ PathwayGPT couldn’t generate an answer: {e}")
+                continue
 
         # === Keyword Search Mode ===
         keywords = [k.strip() for k in raw_input_val.split(",") if k.strip()]
