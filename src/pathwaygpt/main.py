@@ -105,7 +105,9 @@ def main():
             top_chunks = [chunk for _, chunk, _ in results[:3]]
 
             print("\n🤖 PathwayGPT’s interpretation:\n")
-            answer = generate_answer(query, top_chunks)
+            answer = generate_answer(query, top_chunks, memory = memory)
+            memory.append({"role": "user", "content": query})
+            memory.append({"role": "assistant", "content": answer})
             print(answer)
             continue
 
