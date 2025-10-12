@@ -42,6 +42,12 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
             print("🧹 History cleared.")
         return True, chapter_range
 
+    # Clear Context
+    if cmd == "forget":
+        memory.clear()
+        print("🧹 Memory cleared. Starting a new conversation.")
+        return True, None
+
     # Stats
     if cmd == "stats":
         print(f"📊 Total searches ever: {session_data['total_search_count']}")
