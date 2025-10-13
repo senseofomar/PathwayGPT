@@ -2,44 +2,49 @@ from openai import OpenAI
 
 def generate_answer(query, context_chunks, model="gpt-4o-mini", memory=None):
     """
-    Takes user query + top chunks from semantic search,
-    and asks an LLM to summarize or explain the context.
-    Now supports conversation memory for follow-ups.
+    Generates a lore-aware answer using semantic context and conversation memory.
+    - Uses top context chunks from semantic search
+    - Integrates last few conversation turns for continuity
+    - Avoids spoilers and hallucination beyond provided text
     """
     client = OpenAI()
 
-    # Combine context chunks safely
+    # === 1️⃣ Combine context safely ===
     context_text = "\n\n".join(context_chunks) if context_chunks else "No relevant excerpts found."
 
-    # System-level behavior
+    # === 2️⃣ Define system behavior ===
     system_prompt = (
-        "You are PathwayGPT, a spoiler-aware lore assistant for the web novel 'Lord of the Mysteries'. "
-        "Your job is to answer questions strictly using the provided excerpts and recent conversation context. "
-        "Avoid adding spoilers, speculation, or knowledge beyond the excerpts. "
-        "If something is unclear, admit uncertainty clearly."
+        "You are PathwayGPT, a spoiler-aware lore assistant for the novel 'Lord of the Mysteries'. "
+        "Your goal is to answer user questions strictly using the provided excerpts and any recent dialogue context. "
+        "If the information is not in the excerpts, politely state that you don’t have enough context. "
+        "Avoid spoilers or information beyond what’s explicitly provided."
     )
 
-    # Base message list
+    # === 3️⃣ Initialize message list ===
     messages = [{"role": "system", "content": system_prompt}]
 
-    # Add recent conversation memory (last 4 exchanges)
+    # === 4️⃣ Add memory (last few exchanges only, to preserve token limit) ===
     if memory:
-        messages.extend(memory[-4:])
+        recent_context = memory.get_context(limit=6)  # get last 6 messages (user + assistant)
+        if recent_context:
+            messages.extend(recent_context)
 
-    # Add the new user query and context
-    messages.append({
-        "role": "user",
-        "content": f"User Query: {query}\n\nRelevant Excerpts:\n{context_text}"
-    })
+    # === 5️⃣ Add the new user query and excerpts ===
+    user_prompt = (
+        f"User Query: {query}\n\n"
+        f"Relevant Excerpts:\n{context_text}\n\n"
+        "Now answer based strictly on the excerpts above. "
+        "If you must infer, do so cautiously and mark it clearly as an interpretation."
+    )
+    messages.append({"role": "user", "content": user_prompt})
 
-    # Call OpenAI API
+    # === 6️⃣ Call the model ===
     response = client.chat.completions.create(
         model=model,
         messages=messages,
-        temperature=0.7
+        temperature=0.6,  # lower temp = more accurate factual recall
     )
 
-    # Extract final answer text
+    # === 7️⃣ Extract and return answer ===
     answer = response.choices[0].message.content.strip()
-
     return answer
