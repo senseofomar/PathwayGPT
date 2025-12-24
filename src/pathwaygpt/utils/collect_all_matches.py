@@ -1,3 +1,10 @@
+""" What this function is (one brutal simple line)
+collect_all_matches(...) =
+Scan all .txt chapters in a folder → split into sentences →
+find exact + fuzzy keyword hits → return a list of Match records with snippet + metadata.
+This is your search indexer.
+"""
+
 import os  # for file and path handling, launching OS commands
 import re  # for regex searching and substitution
 from collections import namedtuple  # for simple structured storage (Match records)
