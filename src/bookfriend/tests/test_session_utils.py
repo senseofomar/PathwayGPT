@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pathwaygpt.utils import session_utils
+from bookfriend.utils import session_utils
 
 TEST_PATH = "test_session.json"
 
