@@ -1,15 +1,9 @@
 # utils/command_router.py
 
-# Fix 1: Import the path config so we know where to save
 from .config import SESSION_PATH
 from . import session_utils
-
-# Keep existing imports
 from bookfriend.utils.context_memory import recall_last_search
-from bookfriend.utils.semantic_utils import semantic_search
-from bookfriend.utils.answer_generator import generate_answer
 from bookfriend.utils.memory_tools import recall_recent_queries, summarize_memory
-
 
 def handle_command(raw_input_val, session_data, chapter_range, semantic_index, semantic_mapping, memory):
     """Handle user commands from main() and return (handled, updated_chapter_range)."""
@@ -34,7 +28,6 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
 
     # Save history
     if cmd == "save-history-now":
-        # Fix 2: Pass the required PATH argument
         session_utils.save_session(session_data, SESSION_PATH)
         print("✅ Session saved.")
         return True, chapter_range
@@ -91,10 +84,7 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
             start, end = map(int, raw.split())
             chapter_range = [start, end]
             session_data["chapter_range"] = chapter_range
-
-            # Fix 3: Pass the required PATH argument
             session_utils.save_session(session_data, SESSION_PATH)
-
             print(f"✅ Range set: {start} → {end}")
         except ValueError:
             print("⚠️ Invalid input format. Please enter two numbers separated by a space (e.g., '1 50').")
@@ -112,36 +102,8 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
     if cmd == "clear-range":
         chapter_range = None
         session_data["chapter_range"] = None
-
-        # Fix 4: Pass the required PATH argument
         session_utils.save_session(session_data, SESSION_PATH)
-
         print("🗑️ Range cleared. Searching all chapters.")
-        return True, chapter_range
-
-    # Semantic search
-    if cmd.startswith("semantic:"):
-        query = raw_input_val.split("semantic:", 1)[1].strip()
-
-        # Note: We need to pass top_k here if we want more candidates for filtering,
-        # but command_router generally handles the display logic differently.
-        # For now, let's keep the standard search.
-        results = semantic_search(query, semantic_index, semantic_mapping)
-
-        print("\n🔎 Semantic search results:\n")
-        for fname, chunk, dist in results:
-            print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
-
-        top_chunks = [chunk for _, chunk, _ in results[:3]]
-        print("\n🤖 bookfriend’s interpretation:\n")
-
-        # Fix: Ensure answer generator handles potential errors
-        try:
-            answer = generate_answer(query, top_chunks)
-            print(answer)
-        except Exception as e:
-            print(f"⚠️ bookfriend couldn’t generate an answer: {e}")
-
         return True, chapter_range
 
     # Recall last
@@ -170,5 +132,8 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
         print("\n🧩 Memory Summary:\n")
         print(summary)
         return True, chapter_range
+
+    # === REMOVED: Semantic Search Block ===
+    # It is now handled exclusively by main.py to enable the Spoiler Shield.
 
     return False, chapter_range
