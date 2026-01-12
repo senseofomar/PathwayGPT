@@ -52,5 +52,9 @@
       null,
       true
     ]
+  ],
+  "chapter_range": [
+    1,
+    7
   ]
 }
