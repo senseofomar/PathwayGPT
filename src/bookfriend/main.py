@@ -1,14 +1,14 @@
 """
-PathwayGPT — Intelligent Semantic + Keyword Search CLI
+bookfriend — Intelligent Semantic + Keyword Search CLI
 ------------------------------------------------------
-This module orchestrates the main CLI flow for PathwayGPT.
+This module orchestrates the main CLI flow for bookfriend.
 It combines:
  - Semantic search using OpenAI embeddings.
  - Multi-keyword and fuzzy text search.
  - Context memory for follow-up queries.
  - Persistent sessions for user history and preferences.
 
-Author: Omar Shaikh
+Author: senseofomar
 """
 
 from dotenv import load_dotenv
@@ -19,9 +19,9 @@ import sys
 load_dotenv()  # 🔑 Loads your .env file (contains API keys and config)
 
 # === Internal Imports ===
-from pathwaygpt.utils.command_router import handle_command
-from pathwaygpt.utils.context_memory import recall_last_search, suggest_related
-from pathwaygpt.memory import ChatMemory
+from bookfriend.utils.command_router import handle_command
+from bookfriend.utils.context_memory import recall_last_search, suggest_related
+from bookfriend.memory import ChatMemory
 from utils.collect_all_matches import collect_all_matches
 from utils.config import CASE_SENSITIVE_MODE, SESSION_PATH, MAX_HISTORY
 from utils.export_to_csv import export_to_csv
@@ -33,7 +33,7 @@ from utils.answer_generator import generate_answer
 
 
 def main():
-    """Main controller for PathwayGPT CLI."""
+    """Main controller for bookfriend CLI."""
     # === Load or Initialize User Session ===
     session_data = session_utils.load_session(SESSION_PATH)
     session_data.setdefault("search_history", [])
@@ -52,7 +52,7 @@ def main():
 
     # === Display Mode Info ===
     mode_label = "CASE-SENSITIVE" if CASE_SENSITIVE_MODE else "CASE-INSENSITIVE"
-    print(f"\n📘 PathwayGPT — Multi-keyword & Semantic Search ({mode_label} mode)")
+    print(f"\n📘 bookfriend — Multi-keyword & Semantic Search ({mode_label} mode)")
     print("💡 Type 'q' or 'quit' to exit, 'forget' to clear memory.\n")
 
     if session_data["search_history"]:
@@ -127,7 +127,7 @@ def main():
             # --- Prepare Context for Answer Generation ---
             top_chunks = [chunk for _, chunk, _ in results[:3]]
 
-            print("\n🤖 PathwayGPT’s Interpretation:\n")
+            print("\n🤖 bookfriend’s Interpretation:\n")
             print("🤔 Thinking...\n")
 
             # --- Try Generating Answer Using OpenAI ---
@@ -138,7 +138,7 @@ def main():
                 print("\n✅ Done.\n")
 
             except Exception as e:
-                print(f"⚠️ PathwayGPT couldn’t generate an answer: {e}")
+                print(f"⚠️ bookfriend couldn’t generate an answer: {e}")
                 continue
 
             continue  # skip normal keyword mode after semantic search

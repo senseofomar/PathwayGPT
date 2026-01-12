@@ -1,9 +1,9 @@
 # utils/command_router.py
 
-from pathwaygpt.utils.context_memory import recall_last_search
-from pathwaygpt.utils.semantic_utils import semantic_search
-from pathwaygpt.utils.answer_generator import generate_answer
-from pathwaygpt.utils.memory_tools import recall_recent_queries, summarize_memory
+from bookfriend.utils.context_memory import recall_last_search
+from bookfriend.utils.semantic_utils import semantic_search
+from bookfriend.utils.answer_generator import generate_answer
+from bookfriend.utils.memory_tools import recall_recent_queries, summarize_memory
 
 
 def handle_command(raw_input_val, session_data, chapter_range, semantic_index, semantic_mapping, memory):
@@ -118,7 +118,7 @@ def handle_command(raw_input_val, session_data, chapter_range, semantic_index, s
             print(f"[{fname}] (score={dist:.2f}) → {chunk[:200]}...\n")
 
         top_chunks = [chunk for _, chunk, _ in results[:3]]
-        print("\n🤖 PathwayGPT’s interpretation:\n")
+        print("\n🤖 bookfriend’s interpretation:\n")
         answer = generate_answer(query, top_chunks)
         print(answer)
         return True, chapter_range

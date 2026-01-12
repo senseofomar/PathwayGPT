@@ -2,7 +2,7 @@ from collections import deque
 
 class ChatMemory:
     """
-    Handles short-term conversation memory for PathwayGPT.
+    Handles short-term conversation memory for bookfriend.
     - Stores user and assistant messages in chronological order
     - Provides limited context for continuity
     - Can reset or export full history if needed

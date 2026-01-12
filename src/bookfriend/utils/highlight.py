@@ -22,7 +22,7 @@ if Fore and Style:
 # The relative path to the folder that contains your chapter text files.
 # It is built relative to this script's location so the script can be run from anywhere.
 CHAPTERS_FOLDER = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),  # go one level up (from utils/ → pathwaygpt/)
+    os.path.dirname(os.path.dirname(__file__)),  # go one level up (from utils/ → bookfriend/)
     "chapters"
 )
 
