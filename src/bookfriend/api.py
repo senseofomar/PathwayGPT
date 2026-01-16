@@ -10,7 +10,7 @@ from utils.config import SESSION_PATH
 from utils import session_utils
 
 # === 1. Setup App & State ===
-app = FastAPI(title="BookFriend API", version="1.0")
+app = FastAPI(title="BookFriend", version="1.0")
 
 
 # Global state to hold the heavy AI model (so we load it only once)
