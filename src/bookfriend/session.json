@@ -41,9 +41,16 @@
       ],
       null,
       true
+    ],
+    [
+      [
+        "klein"
+      ],
+      null,
+      false
     ]
   ],
-  "total_search_count": 6,
+  "total_search_count": 7,
   "favorites": [
     [
       [
