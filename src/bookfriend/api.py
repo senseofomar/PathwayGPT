@@ -2,6 +2,8 @@ import os
 import shutil
 import sys
 import subprocess
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import List, Optional
@@ -9,6 +11,8 @@ from typing import List, Optional
 # === Import your core logic ===
 from utils.semantic_utils import load_semantic_index, semantic_search
 from utils.answer_generator import generate_answer
+
+load_dotenv()
 
 # === 1. Setup App & State ===
 app = FastAPI(title="BookFriend API (V1 Complete)", version="1.0")
