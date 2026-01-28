@@ -18,10 +18,11 @@ def generate_answer(query, context_chunks, memory=None):
     # 1. Configure Gemini
     genai.configure(api_key=api_key)
 
+    #Use the specific model found in your check_models.py output
     try:
-        model = genai.GenerativeModel('gemini-pro')
-    except:
-        return "⚠️ Error: Could not load Gemini model."
+        model = genai.GenerativeModel('models/gemini-2.0-flash')
+    except Exception as e:
+        return f"⚠️ Error loading model: {str(e)}"
 
     # 2. Prepare Context from RAG
     context_text = "\n\n".join(context_chunks) if context_chunks else "No relevant excerpts found."
