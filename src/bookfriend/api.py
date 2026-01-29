@@ -12,11 +12,16 @@ from typing import List, Optional
 from utils.semantic_utils import load_semantic_index, semantic_search
 from utils.answer_generator import generate_answer
 
+from fastapi.staticfiles import StaticFiles  # <--- NEW
+from fastapi.responses import FileResponse   # <--- NEW
+
 load_dotenv()
 
 # === 1. Setup App & State ===
 app = FastAPI(title="BookFriend API (V1 Complete)", version="1.0")
 
+# Mount the 'static' folder so the HTML can be served
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class AppState:
     semantic_index = None
@@ -62,13 +67,8 @@ class SearchResponse(BaseModel):
 # === 4. Endpoints ===
 
 @app.get("/")
-def home():
-    return {
-        "status": "online",
-        "current_chapter_limit": state.current_chapter_limit,
-        "brain_loaded": state.semantic_index is not None
-    }
-
+def serve_frontend():
+    return FileResponse("static/index.html")
 
 @app.post("/set-progress")
 def set_progress(req: ProgressRequest):
