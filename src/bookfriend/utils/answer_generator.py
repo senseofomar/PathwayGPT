@@ -1,5 +1,5 @@
 import os
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 
 # Load environment variables (to get GEMINI_API_KEY)
@@ -8,21 +8,15 @@ load_dotenv()
 
 def generate_answer(query, context_chunks, memory=None):
     """
-    Generates an answer using Google Gemini (Free Tier).
-    Replaces OpenAI to avoid quota issues.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
+        Generates an answer using Groq (Free Tier, No Credit Card).
+        Model: Llama 3.3 70B (Fast & Smart)
+        """
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        return "⚠️ Error: Missing GEMINI_API_KEY in .env file."
+        return "⚠️ Error: Missing GROQ_API_KEY in .env file."
 
-    # 1. Configure Gemini
-    genai.configure(api_key=api_key)
-
-    #Use the specific model found in your check_models.py output
-    try:
-        model = genai.GenerativeModel('models/gemini-2.0-flash')
-    except Exception as e:
-        return f"⚠️ Error loading model: {str(e)}"
+    # 1. Initialize Groq Client
+    client = Groq(api_key=api_key)
 
     # 2. Prepare Context from RAG
     context_text = "\n\n".join(context_chunks) if context_chunks else "No relevant excerpts found."
@@ -39,20 +33,29 @@ def generate_answer(query, context_chunks, memory=None):
 
     # 4. Build the Prompt
     # We combine system instructions + memory + context + user question
-    prompt = (
+    system_prompt = (
         "You are BookFriend, a helpful AI assistant for the novel 'Lord of the Mysteries'.\n"
         "Answer the user's question strictly based on the provided context excerpts below.\n"
         "If the answer isn't in the text, say you don't know. Do not make things up.\n\n"
+    )
+    user_content =(
         f"{memory_text}\n"
         f"--- CONTEXT EXCERPTS ---\n{context_text}\n"
         "------------------------\n\n"
-        f"USER QUESTION: {query}\n"
-        "ANSWER:"
+        f"USER QUESTION: {query}"
     )
 
     # 5. Generate
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Free & High Quality
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content}
+            ],
+            temperature=0.5,
+            max_tokens=1024,
+        )
+        return completion.choices[0].message.content
     except Exception as e:
-        return f"⚠️ Gemini Error: {str(e)}"
+        return f"⚠️ Groq Error: {str(e)}"
