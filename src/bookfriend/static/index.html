@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookFriend 📘</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --chat-bg: #ffffff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); display: flex; justify-content: center; height: 100vh; margin: 0; }
+        .container { width: 100%; max-width: 800px; background: var(--chat-bg); display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+
+        /* Header */
+        header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        h1 { margin: 0; font-size: 1.2rem; color: #1e293b; }
+        .status { font-size: 0.8rem; color: #10b981; }
+
+        /* Settings Bar */
+        .settings { padding: 10px 20px; background: #f1f5f9; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #e2e8f0; }
+        input[type="number"] { padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; width: 60px; }
+        button#set-limit { padding: 5px 10px; background: #475569; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        /* Chat Area */
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; }
+        .user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 2px; }
+        .bot { align-self: flex-start; background: #f1f5f9; color: #1e293b; border-bottom-left-radius: 2px; }
+        .source { font-size: 0.75rem; opacity: 0.8; margin-top: 5px; display: block; }
+
+        /* Input Area */
+        .input-area { padding: 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+        input#query { flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+        button#send { padding: 0 20px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        button#send:hover { opacity: 0.9; }
+
+        /* Loading */
+        .typing { font-style: italic; color: #64748b; font-size: 0.9rem; margin-left: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📘 BookFriend</h1>
+            <span class="status">● Online</span>
+        </header>
+
+        <div class="settings">
+            <label>🛡️ Spoiler Shield (Max Chapter):</label>
+            <input type="number" id="chap-limit" value="100">
+            <button id="set-limit">Set</button>
+        </div>
+
+        <div id="chat-box">
+            <div class="message bot">Hello! I'm ready to answer questions about <i>Lord of the Mysteries</i>. What's on your mind?</div>
+        </div>
+        <div class="typing" id="typing">BookFriend is thinking...</div>
+
+        <div class="input-area">
+            <input type="text" id="query" placeholder="Ask something (e.g., Who is Klein?)..." onkeypress="handleEnter(event)">
+            <button id="send" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const typing = document.getElementById('typing');
+
+        // 1. Set Spoiler Limit
+        document.getElementById('set-limit').onclick = async () => {
+            const limit = document.getElementById('chap-limit').value;
+            await fetch('/set-progress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chapter_limit: parseInt(limit) })
+            });
+            alert(`✅ Spoiler shield set to Chapter ${limit}`);
+        };
+
+        // 2. Send Message
+        async function sendMessage() {
+            const input = document.getElementById('query');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Add User Message
+            appendMessage(text, 'user');
+            input.value = '';
+            typing.style.display = 'block';
+
+            try {
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: text })
+                });
+                const data = await res.json();
+
+                // Add Bot Message
+                appendMessage(data.answer, 'bot', data.sources);
+            } catch (err) {
+                appendMessage("⚠️ Error: Could not connect to API.", 'bot');
+            }
+            typing.style.display = 'none';
+        }
+
+        function appendMessage(text, sender, sources=[]) {
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+
+            // Format sources if they exist
+            let sourceHtml = '';
+            if (sources && sources.length > 0) {
+                sourceHtml = `<span class="source">📚 Sources: ${sources.join(', ')}</span>`;
+            }
+
+            // Convert newlines to breaks for formatting
+            div.innerHTML = text.replace(/\n/g, '<br>') + sourceHtml;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>
