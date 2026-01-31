@@ -22,3 +22,8 @@ Finally, a verification agent checks for completeness.
 If key topics or entities are under-represented, the system retrieves again before responding.
 
 This is the difference between a demo RAG system and a production grade system.
+
+
+**Make a question answer bot that answers the most frequently asked questions by searching a knowledge base
+of documentation and providing relevant responses, we can use azure QnA maker service for this, like stuff like
+how to upload a pdf on bookfriend or questions like these
