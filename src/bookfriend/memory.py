@@ -28,4 +28,12 @@ class ChatMemory:
         """
         return list(self.messages)[-limit:]
 
+    def clear(self):
+        """Completely clear the conversation history."""
+        self.messages.clear()
 
+    def __len__(self):
+        return len(self.messages)
+
+    def __repr__(self):
+        return f"<ChatMemory size={len(self.messages)}>"
