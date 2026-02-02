@@ -21,12 +21,7 @@ class ChatMemory:
             raise ValueError("Role must be 'user' or 'assistant'")
         self.messages.append({"role": role, "content": content})
 
-    def get_context(self, limit: int = 6):
-        """
-        Return the most recent 'limit' messages as a list
-        (used for continuity in LLM calls).
-        """
-        return list(self.messages)[-limit:]
+
 
     def clear(self):
         """Completely clear the conversation history."""
