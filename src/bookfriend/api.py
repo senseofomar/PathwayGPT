@@ -4,50 +4,61 @@ import sys
 import subprocess
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 # Load secrets
 load_dotenv()
 
 # Import core logic
-from utils.semantic_utils import load_semantic_index, semantic_search
+from utils.semantic_utils import load_semantic_index_from_path, semantic_search
 from utils.answer_generator import generate_answer
 import database  # <--- NEW: Import our DB module
 
 # === Setup App ===
 app = FastAPI(
     title="BookFriend API",
-    version="2.1 (DB-Integrated)",
-    description="Stateful RAG API with SQLite memory."
+    version="2.2 (Multi-book)"
 )
 
-
-# === Global State (Index Cache) ===
+# === Global State (Multi-Tenant Cache) ===
 class AppState:
-    semantic_index = None
-    semantic_mapping = None
-
+    # Dictionary to store multiple books: { "book_id": (index, mapping) }
+    indices: Dict[str, Any] = {}
 
 state = AppState()
+
+# === Helper: Load a specific book ===
+def load_book_index(book_id: str, index_path: str):
+    """Loads a specific book's index into memory if not already present."""
+    if book_id in state.indices:
+        return  # Already loaded
+
+    if not os.path.exists(index_path):
+        print(f"⚠️ Index missing for {book_id}")
+        return
+
+    print(f"📖 Loading Index for {book_id}...")
+    # You need to update semantic_utils.py to accept a path!
+    # (See Action 4 below. For now, we assume a helper exists)
+    try:
+        idx, mapping = load_semantic_index_from_path(index_path)
+        state.indices[book_id] = (idx, mapping)
+        print(f"✅ Loaded {book_id}")
+    except Exception as e:
+        print(f"❌ Failed to load {book_id}: {e}")
 
 
 @app.on_event("startup")
 def startup_event():
-    print("⏳ API Startup: Loading Index & DB...")
-    database.init_db()  # Ensure tables exist
-    reload_index()
+    database.init_db()
+    # Reload all registered books from DB
+    conn = database.get_db()
+    books = conn.execute("SELECT id, index_path FROM books").fetchall()
+    conn.close()
 
-
-def reload_index():
-    try:
-        idx, mapping = load_semantic_index()
-        state.semantic_index = idx
-        state.semantic_mapping = mapping
-        print("✅ Index loaded successfully.")
-    except Exception as e:
-        print(f"⚠️ Index not found: {e}")
-
+    for b in books:
+        load_book_index(b["id"], b["index_path"])
 
 # === API Models ===
 
@@ -68,6 +79,10 @@ class QueryResponse(BaseModel):
     answer: str
     sources: List[str]
 
+class BookListResponse(BaseModel):
+    id: str
+    title: str
+    filename: str
 
 # === Endpoints ===
 
@@ -76,99 +91,104 @@ def health_check():
     return {"status": "online", "db": "connected"}
 
 
+@app.get("/v1/books", response_model=List[BookListResponse])
+def list_books():
+    """Returns a list of all ingested books so the frontend knows what IDs to use."""
+    conn = database.get_db()
+    rows = conn.execute("SELECT id, title, filename FROM books").fetchall()
+    conn.close()
+
+    return [
+        {"id": r["id"], "title": r["title"], "filename": r["filename"]}
+        for r in rows
+    ]
+
 @app.post("/v1/ingest", response_model=IngestResponse)
 def ingest_book(file: UploadFile = File(...)):
-    """Uploads a PDF, indexes it, and registers it in the DB."""
+    # 1. Generate IDs
+    import uuid
+    process_id = str(uuid.uuid4())[:8]
 
-    # 1. Save File
+    # 2. SANITIZATION RESTORED: Clean the original name for the DB
+    # We strip spaces and weird chars so the DB entry is clean
     safe_filename = file.filename.replace(" ", "_")
-    file_location = f"uploaded_{safe_filename}"
 
-    with open(file_location, "wb") as buffer:
+    # 3. Define Paths (Use process_id for disk storage to prevent overwrites)
+    pdf_path = f"upload_{process_id}.pdf"
+    chapters_dir = f"chapters_{process_id}"
+    index_path = f"index_{process_id}.faiss"
+
+    # Save to disk using the SAFE ID, not the filename
+    with open(pdf_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # 2. Standardize name (Temporary: overwrites 'lord_of_mysteries.pdf')
-    target_pdf = "lord_of_mysteries.pdf"
-    if os.path.exists(target_pdf):
-        try:
-            os.remove(target_pdf)
-        except OSError:
-            pass
-    shutil.move(file_location, target_pdf)
+    print(f"⚙️ Processing Book {process_id} ({safe_filename})...")
 
-    # 3. Process
-    print(f"⚙️ Ingesting: {safe_filename}...")
     try:
         env = os.environ.copy()
-        subprocess.run([sys.executable, "ingest.py"], check=True, env=env)
-        subprocess.run([sys.executable, "build_index.py"], check=True, env=env)
+        # Pass the UUID paths to the scripts
+        subprocess.run([sys.executable, "ingest.py", pdf_path, chapters_dir], check=True, env=env)
+        subprocess.run([sys.executable, "build_index.py", chapters_dir, index_path], check=True, env=env)
     except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Processing failed: {e}")
+    finally:
+        if os.path.exists(pdf_path): os.remove(pdf_path)
 
-    reload_index()
-
-    # 4. Register in DB (The New Part!)
-    # We assume it's 'Lord of the Mysteries' for now, but generated a unique ID
+    # 4. Register in DB
+    # Use the 'safe_filename' here so the user sees a nice name
     book_id = database.register_book(
-        title="Lord of the Mysteries",
-        filename=safe_filename,
-        index_path="semantic_index.faiss"
+        title=file.filename,  # Original title (e.g., "Lord of Mysteries.pdf")
+        filename=safe_filename,  # Cleaned filename (e.g., "Lord_of_Mysteries.pdf")
+        index_path=index_path  # Points to the UUID index file
     )
 
-    return {
-        "message": "Book ingested and registered.",
-        "book_id": book_id,
-        "title": "Lord of the Mysteries"
-    }
+    load_book_index(book_id, index_path)
+
+    return {"message": "Book Processed", "book_id": book_id, "title": file.filename}
 
 
 @app.post("/v1/query", response_model=QueryResponse)
-def query_book(request: QueryRequest):
-    """Answers questions using RAG + Conversation History from DB."""
+def query_book(req: QueryRequest):
+    # 1. Load Index if missing
+    if req.book_id not in state.indices:
+        conn = database.get_db()
+        row = conn.execute("SELECT index_path FROM books WHERE id = ?", (req.book_id,)).fetchone()
+        conn.close()
+        if row:
+            load_book_index(req.book_id, row["index_path"])
 
-    if not state.semantic_index:
-        raise HTTPException(status_code=503, detail="Index not loaded.")
+        if req.book_id not in state.indices:
+            raise HTTPException(status_code=404, detail="Book not found or not indexed.")
 
-    # 1. Retrieve Chat History (Memory)
-    # The 'memory' object passed to generate_answer needs a specific format.
-    # We'll create a simple wrapper or pass the list directly if updated.
-    history = database.get_chat_history(request.user_id, request.book_id)
+    idx, mapping = state.indices[req.book_id]
 
-    # Hack: We need to pass history to generate_answer.
-    # Let's wrap it in a mock object since our generate_answer expects a .get_context() method
+    # 2. History & Search
+    history = database.get_chat_history(req.user_id, req.book_id)
+
     class MemoryWrapper:
-        def get_context(self, limit=6):
-            return history
+        def get_context(self, limit=6): return history
 
     memory_mock = MemoryWrapper()
 
-    # 2. RAG Search
-    raw_results = semantic_search(request.query, state.semantic_index, state.semantic_mapping)
+    raw_results = semantic_search(req.query, idx, mapping)
 
     # 3. Filter Spoilers
     safe_results = []
-    limit = request.chapter_limit
+    limit = req.chapter_limit
     for fname, chunk, _ in raw_results:
         try:
             chap_num = int(''.join(filter(str.isdigit, fname)))
-            if chap_num <= limit:
-                safe_results.append((fname, chunk))
-        except ValueError:
-            safe_results.append((fname, chunk))  # Keep safe if unknown
+            if chap_num <= limit: safe_results.append((fname, chunk))
+        except:
+            safe_results.append((fname, chunk))
 
     final_context = safe_results[:3]
-    chunks_text = [chunk for _, chunk in final_context]
+    chunks_text = [c for _, c in final_context]
 
-    # 4. Generate Answer (With Memory!)
-    answer = generate_answer(request.query, chunks_text, memory=memory_mock)
+    # 4. Answer & Log
+    answer = generate_answer(req.query, chunks_text, memory=memory_mock)
 
-    # 5. Save to DB (Log the interaction)
-    # Log User Question
-    database.log_message(request.user_id, request.book_id, "user", request.query, request.chapter_limit)
-    # Log Bot Answer
-    database.log_message(request.user_id, request.book_id, "bot", answer, request.chapter_limit)
+    database.log_message(req.user_id, req.book_id, "user", req.query, req.chapter_limit)
+    database.log_message(req.user_id, req.book_id, "bot", answer, req.chapter_limit)
 
-    return {
-        "answer": answer,
-        "sources": [f for f, _ in final_context]
-    }
+    return {"answer": answer, "sources": [f for f, _ in final_context]}
