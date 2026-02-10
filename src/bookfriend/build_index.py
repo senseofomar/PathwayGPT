@@ -1,108 +1,132 @@
 import os
+import sys
 import faiss
 import pickle
 import re
 from sentence_transformers import SentenceTransformer
 
-# === CONFIGURATION ===
-CHAPTERS_FOLDER = "chapters"
-INDEX_PATH = "semantic_index.faiss"
-MAPPING_PATH = "semantic_mapping.pkl"
-CHUNK_SIZE = 800  # Target characters per chunk
-OVERLAP = 100  # Overlap ensures context isn't lost at boundaries
+# === Configuration ===
+if len(sys.argv) > 2:
+    CHAPTERS_DIR = sys.argv[1]   # Arg 1: Text chunks folder
+    INDEX_FILE = sys.argv[2]     # Arg 2: Output FAISS file
+else:
+    CHAPTERS_DIR = "chapters"
+    INDEX_FILE = "semantic_index.faiss"
+
+print(f"🔍 Building Index from: {CHAPTERS_DIR}")
+print(f"💾 Saving to: {INDEX_FILE}")
+
+# Derived mapping path (index.faiss -> index.pkl)
+MAPPING_FILE = INDEX_FILE.replace(".faiss", ".pkl")
+
+# Chunking config
+CHUNK_SIZE = 800               # max characters per chunk
+SENTENCE_OVERLAP = 2           # overlap in sentences
 
 
-def smart_chunking(text, chunk_size=800, overlap=100):
+def smart_chunking(text, chunk_size=800, overlap_sentences=2):
     """
-    Splits text into chunks while respecting sentence boundaries.
-    1. Splits by sentences (simple regex).
-    2. Groups sentences until the chunk reaches ~800 chars.
-    3. Adds a bit of overlap from the previous chunk to maintain context.
+    Sentence-safe chunking with bounded size and semantic overlap.
     """
-    # Split text into sentences (look for [.!?] followed by space or newline)
     sentences = re.split(r'(?<=[.!?])\s+', text)
-
     chunks = []
-    current_chunk = []
-    current_len = 0
+    current = []
+
+    def current_len():
+        return sum(len(s) for s in current)
 
     for sentence in sentences:
-        # If adding this sentence exceeds the limit, save the current chunk
-        if current_len + len(sentence) > chunk_size and current_chunk:
-            # Join the sentences to form the chunk text
-            chunk_text = " ".join(current_chunk)
-            chunks.append(chunk_text)
+        sentence = sentence.strip()
+        if not sentence:
+            continue
 
-            # Start new chunk with some overlap (last 1-2 sentences from previous)
-            # This helps the AI understand context across cut points.
-            overlap_text = current_chunk[-1] if len(current_chunk) > 0 else ""
-            current_chunk = [overlap_text, sentence] if len(overlap_text) < chunk_size else [sentence]
-            current_len = len(" ".join(current_chunk))
+        # If adding this sentence exceeds chunk size
+        if current_len() + len(sentence) > chunk_size:
+            chunks.append(" ".join(current))
+
+            # Start new chunk with sentence overlap
+            overlap = current[-overlap_sentences:] if overlap_sentences > 0 else []
+            current = overlap[:]
+
+            # Ensure overlap itself doesn't exceed chunk size
+            while current_len() + len(sentence) > chunk_size and len(current) > 0:
+                current.pop(0)
+
+            current.append(sentence)
         else:
-            # Just add sentence to current chunk
-            current_chunk.append(sentence)
-            current_len += len(sentence)
+            current.append(sentence)
 
-    # Add the last leftover chunk
-    if current_chunk:
-        chunks.append(" ".join(current_chunk))
+    if current:
+        chunks.append(" ".join(current))
 
     return chunks
 
 
 def build_index():
-    if not os.path.exists(CHAPTERS_FOLDER):
-        print(f"❌ Error: '{CHAPTERS_FOLDER}' folder not found. Did you run ingest.py?")
+    if not os.path.exists(CHAPTERS_DIR):
+        print(f"❌ Error: '{CHAPTERS_DIR}' folder not found.")
         return
 
-    print("⏳ Loading embedding model... (This may take a moment)")
-    # We use 'all-MiniLM-L6-v2' -> Fast, small, good enough for V1.
+    print("⏳ Loading embedding model...")
     model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    texts = []  # The actual text content
-    mapping = []  # Metadata: (filename, text_content) - so we can cite the source later
+    texts = []
+    mapping = []
 
-    files = sorted(os.listdir(CHAPTERS_FOLDER))
-    print(f"📂 Found {len(files)} chapters. Processing...")
+    files = sorted(os.listdir(CHAPTERS_DIR))
+    print(f"📂 Found {len(files)} files. Processing...")
 
     for fname in files:
         if not fname.endswith(".txt"):
             continue
 
-        path = os.path.join(CHAPTERS_FOLDER, fname)
+        path = os.path.join(CHAPTERS_DIR, fname)
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # SKIP EMPTY FILES (Safety check)
         if not content.strip():
             continue
 
-        # Create chunks
-        file_chunks = smart_chunking(content, CHUNK_SIZE, OVERLAP)
+        file_chunks = smart_chunking(
+            content,
+            chunk_size=CHUNK_SIZE,
+            overlap_sentences=SENTENCE_OVERLAP
+        )
 
         for chunk in file_chunks:
             texts.append(chunk)
-            mapping.append((fname, chunk))  # Store where this chunk came from
+            mapping.append({
+                "file": fname,
+                "chunk_id": len(mapping),
+                "text": chunk
+            })
 
     if not texts:
-        print("❌ No text found to index!")
+        print("❌ No text found to index.")
         return
 
-    print(f"🔢 Encoding {len(texts)} chunks into vectors...")
-    embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=True)
+    print(f"🔢 Encoding {len(texts)} chunks...")
+    embeddings = model.encode(
+        texts,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        show_progress_bar=True
+    )
 
-    # Build FAISS index
-    dimension = embeddings.shape[1]  # 384 for all-MiniLM-L6-v2
-    index = faiss.IndexFlatL2(dimension)
+    dimension = embeddings.shape[1]
+
+    # Cosine similarity via Inner Product
+    index = faiss.IndexFlatIP(dimension)
     index.add(embeddings)
 
-    # Save to disk
-    faiss.write_index(index, INDEX_PATH)
-    with open(MAPPING_PATH, "wb") as f:
+    # Save index + metadata
+    faiss.write_index(index, INDEX_FILE)
+    with open(MAPPING_FILE, "wb") as f:
         pickle.dump(mapping, f)
 
-    print(f"✅ Index built! Saved to '{INDEX_PATH}'.")
-    print(f"📊 Total Chunks: {len(texts)}")
+    print(f"✅ Index built successfully!")
+    print(f"   → FAISS index: {INDEX_FILE}")
+    print(f"   → Metadata:   {MAPPING_FILE}")
 
 
 if __name__ == "__main__":

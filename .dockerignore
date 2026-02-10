@@ -1,0 +1,26 @@
+# Ignore git files
+.git
+.gitignore
+
+# Ignore local python environments
+.venv
+venv
+ENV
+
+# Ignore cache files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local databases and uploads (we start fresh in the container)
+*.db
+*.faiss
+*.pkl
+chapters_*
+upload_*
+uploaded_*
+
+# Ignore IDE settings
+.idea
+.vscode

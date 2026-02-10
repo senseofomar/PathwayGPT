@@ -1,19 +1,32 @@
 import faiss
 import pickle
 from sentence_transformers import SentenceTransformer
+import os
 
-INDEX_PATH = "semantic_index.faiss"
-MAPPING_PATH = "semantic_mapping.pkl"
-
-# Load model only once
+# Load model only once (Global cache)
 SEM_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
-def load_semantic_index():
-    """Load FAISS index + mapping from disk."""
-    index = faiss.read_index(INDEX_PATH)
-    with open(MAPPING_PATH, "rb") as f:
-        mapping = pickle.load(f)
+def load_semantic_index_from_path(index_path):
+    """
+    Loads FAISS index and mapping from a specific path.
+    """
+    if not os.path.exists(index_path):
+        raise FileNotFoundError(f"Index not found at {index_path}")
+
+    index = faiss.read_index(index_path)
+
+    # Derive mapping path from index path (e.g. index_123.faiss -> index_123.pkl)
+    mapping_path = index_path.replace(".faiss", ".pkl")
+
+    if os.path.exists(mapping_path):
+        with open(mapping_path, 'rb') as f:
+            mapping = pickle.load(f)
+    else:
+        mapping = []
+        print(f"⚠️ Warning: No mapping file found at {mapping_path}")
+
     return index, mapping
+
 
 def semantic_search(query, index, mapping, top_k=5):
     """Perform semantic search on the FAISS index."""
@@ -21,6 +34,17 @@ def semantic_search(query, index, mapping, top_k=5):
     distances, indices = index.search(query_vec, top_k)
     results = []
     for idx, dist in zip(indices[0], distances[0]):
-        filename, chunk = mapping[idx]
-        results.append((filename, chunk, dist))
+        if idx < len(mapping):
+            entry = mapping[idx]
+
+            # === 🛡️ FIX: Handle Dictionary Format ===
+            if isinstance(entry, dict):
+                filename = entry.get("file", "unknown")
+                chunk = entry.get("text", "")
+            else:
+                # Fallback for old Tuple format (filename, chunk)
+                filename, chunk = entry
+
+            results.append((filename, chunk, dist))
+
     return results
